@@ -118,7 +118,7 @@ adapter was audited against real local history as well as fixtures.
 | File read | known | inferred | known | known | known | inferred | inferred | known |
 | File create vs change | ✓ | ✓ | ✓ | change only | ✓ | inferred | change only, inferred | ✓ |
 | Plans | TodoWrite | update_plan | todowrite | – | write_todos | TodoWrite (merge, inferred) | – | ✓ |
-| Turns | ✓ | ✓ | ✓ | ✓ | end inferred | ✓ (end mostly inferred) | end inferred | ✓ |
+| Turns | ✓ | ✓ | ✓ | ✓ | end inferred | ✓ (end inferred from tool-free replies; measured) | end inferred | ✓ |
 | Token usage | ✓ | ✓ | ✓ | ✓ | ✓ | – | – | – |
 | User shell commands | ✓ (`!cmd`, no exit code) | ✓ | – | – | – | – | – | – |
 | Timestamps | ✓ | ✓ | ✓ | ✓ | ✓ | user turns only | ✓ | receive time |

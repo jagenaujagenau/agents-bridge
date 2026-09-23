@@ -9,7 +9,7 @@ import {
 } from "@agentbridge/core"
 import { type HarnessId, noCapabilities } from "@agentbridge/schema"
 import { Context, Effect, FileSystem, Layer, Path, Stream } from "effect"
-import { decodeLine, HARNESS, initialState, NAME, normalizeLine, parseCursorTimestamp } from "./CursorNormalizer.ts"
+import { decodeLine, HARNESS, initialState, NAME, normalizeLine, onHalt, parseCursorTimestamp } from "./CursorNormalizer.ts"
 
 const harness = HARNESS as HarnessId
 
@@ -113,7 +113,7 @@ export class CursorAdapter extends Context.Service<CursorAdapter, HarnessAdapter
       read: (descriptor, readOptions) =>
         readLines(fs, harness, descriptor.sourcePath, { follow: readOptions?.follow }).pipe(
           Stream.map(decodeLine),
-          Stream.mapAccum(() => initialState(descriptor.id, descriptor.sourcePath, descriptor.projectPath), normalizeLine)
+          Stream.mapAccum(() => initialState(descriptor.id, descriptor.sourcePath, descriptor.projectPath), normalizeLine, { onHalt })
         )
     })
   })

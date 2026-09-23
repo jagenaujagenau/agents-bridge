@@ -157,7 +157,20 @@ All six items left after v0.2 are now implemented:
 | 57 | Enrichers over the wire | Functions cannot travel. The built-in git enricher, commit verification and redaction are sent as flags (they must run in order on the server); other enrichers run in the client after the stream arrives. |
 | 58 | CLI backend selection | `BRIDGE_DAEMON=auto` (default) uses a running daemon and otherwise runs in-process; `on` requires it; `off` never uses it. `bridge daemon start [--detach] \| stop \| status`. |
 
-## Still open
+## Turn ends from evidence (v0.5.1)
 
-- **Turns** where no source records an end remain heuristic (Gemini CLI, Antigravity) or mostly
-  inferred (Cursor).
+| # | Change | Evidence |
+|---|---|---|
+| 59 | Cursor: a reply without tool calls ends the turn | In the 60 local Cursor transcripts, a tool-free reply is followed by a prompt (287), the end of the file (25) or `turn_ended` (28) — never by more agent work. The end is held for one record so a following `turn_ended` supplies a `known` outcome; otherwise the turn closes `completed` / `inferred`. Local Cursor turns now close as 312 inferred-completed, 35 known, and 761 `unknown`: prompts that interrupted tool work (610) or were queued back to back, where the history does not say how the turn ended. |
+| 60 | Cursor `store.db` is not a turn source | `~/.cursor/chats/*/store.db` (the `cursor-agent` CLI only, 3 local chats) is a content-addressed, partly encrypted message graph. It records tool results but no turn boundaries. |
+
+## Limits of the sources
+
+Nothing is left open in the implementation. What remains are limits of what harnesses record:
+
+- **Gemini CLI and Antigravity** record no turn end. The same tool-free-reply rule applies; it is
+  confirmed on Cursor data but has not been measured on these two, since no local history exists.
+- **Cursor** turns interrupted by a new prompt, and **user shell commands in Claude Code**, have no
+  recorded outcome and stay `unknown`.
+- **Session end** is recorded by none of the eight sources, so `Session.status` is `unknown` for
+  history.

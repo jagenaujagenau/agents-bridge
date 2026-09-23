@@ -1,9 +1,11 @@
-import { Bridge, HostEnvironment } from "@agentbridge/core"
+import { Bridge, HostEnvironment, sequenceEvents } from "@agentbridge/core"
+import { makeSessionId } from "@agentbridge/schema"
 import { adapterContract, bridgeWithAdapter, cursorFixtureDir, expectGolden, scenario } from "@agentbridge/testing"
 import { describe, expect, it } from "@effect/vitest"
 import { Effect, Stream } from "effect"
 import { fileURLToPath } from "node:url"
 import { classifyCursorFile, CursorAdapter, decodeCursorProjectDir, parseCursorTimestamp, splitUserText } from "../src/index.ts"
+import { decodeLine, initialState, normalizeLine, onHalt } from "../src/CursorNormalizer.ts"
 
 const layer = bridgeWithAdapter(CursorAdapter, CursorAdapter.layer, HostEnvironment.layer({ CURSOR_CONFIG_DIR: cursorFixtureDir }))
 
@@ -65,4 +67,28 @@ describe("cursor", () => {
       expect(yield* decodeCursorProjectDir("Users-me-my-app-x", exists)).toBe("/Users/me/my/app-x")
       expect(yield* decodeCursorProjectDir("Users-gone-away", exists)).toBeUndefined()
     }))
+})
+
+describe("cursor turn ends", () => {
+  const run = (records: ReadonlyArray<object>) => {
+    const sessionId = makeSessionId("cursor", "t")
+    return Effect.runSync(
+      Stream.fromIterable(records.map((r, index) => ({ index, line: JSON.stringify(r) }))).pipe(
+        Stream.map(decodeLine),
+        Stream.mapAccum(() => initialState(sessionId, "/t.jsonl", undefined), normalizeLine, { onHalt }),
+        sequenceEvents(sessionId),
+        Stream.runCollect
+      )
+    ).filter((e) => e.type === "turn.completed").map((e) => [(e as { outcome: string }).outcome, e.certainty])
+  }
+  const prompt = { role: "user", message: { content: [{ type: "text", text: "<user_query>\ngo\n</user_query>" }] } }
+  const reply = { role: "assistant", message: { content: [{ type: "text", text: "done" }] } }
+  const working = { role: "assistant", message: { content: [{ type: "tool_use", name: "Shell", input: { command: "ls" } }] } }
+
+  it("a reply without tool calls ends the turn; turn_ended, when present, supplies the outcome", () => {
+    expect(run([prompt, reply, prompt])).toEqual([["completed", "inferred"]])
+    expect(run([prompt, reply])).toEqual([["completed", "inferred"]])
+    expect(run([prompt, reply, { type: "turn_ended", status: "error" }])).toEqual([["failed", "known"]])
+    expect(run([prompt, working, prompt])).toEqual([["unknown", "inferred"]])
+  })
 })

@@ -116,6 +116,13 @@ export interface CursorState {
   readonly sawPrompt: boolean
   /** The open turn, if any. */
   readonly turn: string | undefined
+  /**
+   * The agent replied without calling tools. In local history such a reply is always followed
+   * by a prompt, `turn_ended` or the end of the file, never by more agent work, so it ends the
+   * turn; the end is held for one record so a following `turn_ended` can supply the outcome.
+   */
+  readonly replied: boolean
+  readonly lastIndex: number
   readonly projectPath: string | undefined
   /** The latest `<timestamp>` seen; Cursor records time only on user turns. */
   readonly lastTimestamp: string | undefined
@@ -128,6 +135,8 @@ export const initialState = (sessionId: SessionId, path: string, projectPath: st
   started: false,
   sawPrompt: false,
   turn: undefined,
+  replied: false,
+  lastIndex: -1,
   projectPath,
   lastTimestamp: undefined,
   todos: new Map()
@@ -135,7 +144,23 @@ export const initialState = (sessionId: SessionId, path: string, projectPath: st
 
 type Step = readonly [CursorState, ReadonlyArray<Emission>]
 
+/** Close a turn whose agent already replied, when no `turn_ended` record says how it ended. */
+const closeReplied = (state: CursorState, index: number): Step => {
+  if (!state.replied || state.turn === undefined) return [{ ...state, replied: false }, []]
+  const s = new RecordScope({ harness: HARNESS, sessionId: state.sessionId, format: FORMAT, path: state.path, recordIndex: index })
+  return [{ ...state, replied: false, turn: endTurn(s, state.turn, "completed", { certainty: "inferred" }) }, s.emissions]
+}
+
+export const onHalt = (state: CursorState): ReadonlyArray<Emission> => closeReplied(state, state.lastIndex + 1)[1]
+
 export const normalizeLine = (initial: CursorState, line: DecodedRecord<CursorRecord>): Step => {
+  const endsTurn = line._tag === "Record" && "type" in line.record
+  const [closed, before] = endsTurn || line._tag === "Skip" ? [initial, []] as Step : closeReplied(initial, line.index)
+  const [next, emissions] = normalizeRecord({ ...closed, lastIndex: line.index }, line)
+  return [{ ...next, replied: endsTurn ? false : next.replied }, before.length === 0 ? emissions : [...before, ...emissions]]
+}
+
+const normalizeRecord = (initial: CursorState, line: DecodedRecord<CursorRecord>): Step => {
   let state = initial
   if (line._tag === "Skip") return [state, []]
   const base = { harness: HARNESS, sessionId: state.sessionId, format: FORMAT, path: state.path, recordIndex: line.index }
@@ -193,6 +218,9 @@ export const normalizeLine = (initial: CursorState, line: DecodedRecord<CursorRe
     s.event({ type: "session.started", certainty: "known" })
     state = { ...state, started: true }
   }
+  const tools = blocks.some((block) => block.type === "tool_use")
+  const text = blocks.some((block) => block.type === "text" && block.text.trim().length > 0)
+  if (!tools && text && state.turn !== undefined) state = { ...state, replied: true }
   for (const block of blocks) {
     if (block.type === "text") {
       if (block.text.trim().length > 0) {
