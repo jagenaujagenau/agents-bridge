@@ -222,6 +222,9 @@ importers:
       '@agentbridge/core':
         specifier: workspace:*
         version: link:../core
+      '@agentbridge/daemon':
+        specifier: workspace:*
+        version: link:../daemon
       '@agentbridge/platform-node':
         specifier: workspace:*
         version: link:../platform-node
@@ -243,6 +246,31 @@ importers:
       effect:
         specifier: 4.0.0-rc.115
         version: 4.0.0-rc.115
+
+  packages/daemon:
+    dependencies:
+      '@agentbridge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agentbridge/schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@effect/platform-node':
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
+      effect:
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115
+      undici:
+        specifier: 8.10.2
+        version: 8.10.2
+    devDependencies:
+      '@agentbridge/platform-node':
+        specifier: workspace:*
+        version: link:../platform-node
+      '@agentbridge/testing':
+        specifier: workspace:*
+        version: link:../testing
 
   packages/platform-node:
     dependencies:

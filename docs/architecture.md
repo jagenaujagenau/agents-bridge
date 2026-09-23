@@ -18,6 +18,8 @@
         ↑
 @agentbridge/platform-node          NodeBridge.layer(), NodeVersionProbe, NodeSqliteReader (node:sqlite)
         ↑
+@agentbridge/daemon                 serveDaemon (Unix socket, HTTP + JSONL) and DaemonBridge (same Bridge API as a client)
+        ↑
 @agentbridge/cli                    reference consumer
 examples/replay                     depends on core + schema only
 
@@ -105,6 +107,17 @@ program.pipe(Effect.provide(NodeBridge.layer()), Effect.runPromise)
 Enrichers (`core/enrich.ts`) are per-session stateful steps `(event) => events`, applied after
 normalization and followed by resequencing, so they never see provider data.
 
+## Deployment modes (spec §71)
+
+```text
+embedded:  app ──► Bridge (NodeBridge.layer) ──► adapters ──► history
+daemon:    app ──► Bridge (DaemonBridge.layer) ──► ~/.bridge/daemon.sock ──► Bridge (embedded) ──► …
+```
+
+Both provide the same `Bridge` service. The daemon adds a shared tail per watched session and a single
+process holding the SQLite index; clients stay thin. `bridge` picks the daemon automatically when one
+is running (`BRIDGE_DAEMON=auto`).
+
 ## Errors
 
 Expected failures are `Schema.TaggedError`s: `SessionNotFound`, `SessionReadError`,
@@ -121,4 +134,4 @@ session ID and counts, never prompt or file content.
 
 ## Not built yet (by design)
 
-Daemon. Live ACP traffic is consumed directly through `acpEvents`.
+Live ACP traffic is consumed directly through `acpEvents`; Bridge does not manage agent processes.

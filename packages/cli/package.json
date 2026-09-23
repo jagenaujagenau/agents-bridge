@@ -11,7 +11,8 @@
     "@effect/platform-node": "4.0.0-rc.115",
     "@agentbridge/schema": "workspace:*",
     "@agentbridge/core": "workspace:*",
-    "@agentbridge/platform-node": "workspace:*"
+    "@agentbridge/platform-node": "workspace:*",
+    "@agentbridge/daemon": "workspace:*"
   },
   "bin": {
     "bridge": "./src/bin.ts"

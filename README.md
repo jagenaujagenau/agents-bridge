@@ -33,6 +33,8 @@ pnpm bridge events <session-id> --jsonl  # canonical JSONL
 pnpm bridge events <session-id> --git --redact   # derive + verify commits, mask secrets
 pnpm bridge watch <session-id>           # existing events, then new ones as the session grows
 pnpm bridge index                        # import everything into the SQLite index ($BRIDGE_DB)
+pnpm bridge daemon start --detach        # serve Bridge on ~/.bridge/daemon.sock; other commands use it automatically
+pnpm bridge daemon status | stop
 pnpm bridge export <session-id> --out ./out
 
 pnpm audit:local           # normalize every local session; report counts, warnings, invariant violations
@@ -99,6 +101,7 @@ messagesFromYourAcpClient.pipe(               // Stream<unknown> of JSON-RPC mes
 | `@agentbridge/store-sqlite` | Persistent `SessionStore` on `node:sqlite`, incremental by source fingerprint |
 | `@agentbridge/platform-node` | `NodeBridge.layer()`, version probing, `node:sqlite` reader, local history audit |
 | `@agentbridge/testing` | Fixtures, adapter/store contract suites, invariants, semantic projection, goldens |
+| `@agentbridge/daemon` | Background service on a Unix socket, and `DaemonBridge`: the same `Bridge` API as a client |
 | `@agentbridge/cli` | `bridge` reference CLI |
 
 ## Docs
@@ -131,4 +134,5 @@ harness, the SQLite index and the git / redaction enrichers.
 v0.4 tails growing sessions from the last byte offset, emits turns for every harness, verifies
 derived commits against the repository and redacts session metadata.
 
-Not built yet: a daemon.
+v0.5 adds the background daemon: one process serves many clients over an owner-only Unix socket, with
+one shared tail per watched session. Switching an application to it is a one-layer change.

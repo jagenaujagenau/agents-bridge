@@ -216,6 +216,28 @@ sessions share a database (OpenCode).
 Recordings are JSONL, one message per line, either bare JSON-RPC or
 `{"receivedAt": "<RFC 3339>", "message": <JSON-RPC>}`.
 
+## Daemon API
+
+`bridge daemon start` serves the same model over a Unix socket (`$BRIDGE_SOCKET`, default
+`~/.bridge/daemon.sock`, owner-only). Plain HTTP; the host name is ignored.
+
+| Method | Path | Query / body | Response |
+|---|---|---|---|
+| GET | `/v1/health` | | `{protocol, pid, startedAt, watches}` |
+| GET | `/v1/harnesses` | | `[{id, name, capabilities}]` |
+| GET | `/v1/harnesses/detect` | | `[DetectionResult]` |
+| GET | `/v1/sessions` | `harness`, `project`, `since`, `refresh=1` | JSONL of `SessionDescriptor` |
+| GET | `/v1/session/describe` | `id` | `SessionDescriptor` |
+| GET | `/v1/session` | `id`, `redact=1` | `{session, warnings, eventCount}` |
+| GET | `/v1/session/events` | `id`, `git=1`, `verifyGit=1`, `redact=1` | JSONL of `SessionEvent` |
+| GET | `/v1/session/watch` | as events, plus `interval` (ms) | JSONL, open until the client disconnects |
+| POST | `/v1/session/export` | `{id, destination (absolute), git?, verifyGit?, redact?}` | `{directory, manifest}` |
+| POST | `/v1/session/index` | `{id, force?}` | `{session, warnings, eventCount, skipped}` |
+| POST | `/v1/shutdown` | | `{stopping: true}` |
+
+Errors are `{"error": {"_tag": "SessionNotFound", …}}` with status 404 (not found), 400 (bad
+request) or 500. A failure in the middle of a JSONL stream arrives as a last line of the same shape.
+
 ## Export bundle
 
 `bridge export <id> --out <dir>` writes:

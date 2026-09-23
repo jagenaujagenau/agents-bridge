@@ -1,6 +1,11 @@
 import { Bridge, type BridgeError, gitEnricher } from "@agentbridge/core"
 import { encodeEventLine, encodeSessionJson, PROTOCOL_VERSION, type SessionDescriptor, type SessionEvent } from "@agentbridge/schema"
-import { Console, Effect, Option, Stream } from "effect"
+import { defaultSocket, daemonHealth, runDaemon, stopDaemon } from "@agentbridge/daemon"
+import { Console, Effect, Option, Schedule, Stream } from "effect"
+import { spawn } from "node:child_process"
+import { mkdirSync, openSync } from "node:fs"
+import { homedir } from "node:os"
+import { dirname, join } from "node:path"
 import { Argument, Command, Flag } from "effect/unstable/cli"
 import { renderDescriptorRow, renderDetection, renderEvent, renderSession } from "./render.ts"
 
@@ -158,6 +163,81 @@ const index = Command.make(
     }))
 ).pipe(Command.withDescription("Import sessions into the SQLite index ($BRIDGE_DB, default ~/.bridge/bridge.db)"))
 
+// ---------------------------------------------------------------------------
+// Daemon
+// ---------------------------------------------------------------------------
+
+const socketFlag = Flag.String("socket").pipe(
+  Flag.optional,
+  Flag.withDescription("Unix socket (default $BRIDGE_SOCKET or ~/.bridge/daemon.sock)")
+)
+const socketOf = (flag: Option.Option<string>) => Option.getOrElse(flag, () => defaultSocket(process.env, homedir()))
+
+const daemonStart = Command.make(
+  "start",
+  {
+    socket: socketFlag,
+    detach: Flag.Boolean("detach").pipe(Flag.withDefault(false), Flag.withDescription("Run in the background; log to ~/.bridge/daemon.log"))
+  },
+  ({ detach, socket: flag }) =>
+    Effect.gen(function*() {
+      const socket = socketOf(flag)
+      const running = yield* daemonHealth(socket)
+      if (Option.isSome(running)) {
+        yield* Console.log(`bridge daemon already running (pid ${running.value.pid}) on ${socket}`)
+        return
+      }
+      if (detach) {
+        const log = join(dirname(socket), "daemon.log")
+        mkdirSync(dirname(socket), { recursive: true, mode: 0o700 })
+        const out = openSync(log, "a", 0o600)
+        const child = spawn(process.execPath, [...process.execArgv, process.argv[1]!, "daemon", "start", "--socket", socket], {
+          detached: true,
+          stdio: ["ignore", out, out]
+        })
+        child.unref()
+        const health = yield* daemonHealth(socket).pipe(
+          Effect.repeat({ until: Option.isSome, schedule: Schedule.spaced("100 millis"), times: 100 })
+        )
+        if (Option.isNone(health)) {
+          yield* Console.error(`bridge daemon did not start; see ${log}`)
+          process.exitCode = 1
+          return
+        }
+        yield* Console.log(`bridge daemon started (pid ${health.value.pid}) on ${socket}`)
+        return
+      }
+      yield* Console.log(`bridge daemon listening on ${socket} (pid ${process.pid})`)
+      yield* runDaemon({ socket })
+      yield* Console.log("bridge daemon stopped")
+    })
+).pipe(Command.withDescription("Serve Bridge to other processes over a Unix socket"))
+
+const daemonStop = Command.make("stop", { socket: socketFlag }, ({ socket: flag }) =>
+  Effect.gen(function*() {
+    const socket = socketOf(flag)
+    yield* Console.log((yield* stopDaemon(socket)) ? "bridge daemon stopping" : `no bridge daemon on ${socket}`)
+  })).pipe(Command.withDescription("Stop a running daemon"))
+
+const daemonStatus = Command.make("status", { socket: socketFlag, json }, ({ json, socket: flag }) =>
+  Effect.gen(function*() {
+    const socket = socketOf(flag)
+    const health = yield* daemonHealth(socket)
+    if (json) return yield* Console.log(JSON.stringify(Option.getOrNull(health)))
+    if (Option.isNone(health)) {
+      yield* Console.log(`no bridge daemon on ${socket}`)
+      process.exitCode = 1
+      return
+    }
+    const h = health.value
+    yield* Console.log(`bridge daemon running on ${socket}\n  pid: ${h.pid}\n  since: ${h.startedAt}\n  active watches: ${h.watches}\n  protocol: ${h.protocol}`)
+  })).pipe(Command.withDescription("Show whether a daemon is running"))
+
+const daemon = Command.make("daemon").pipe(
+  Command.withDescription("Run Bridge as a background service shared by many clients"),
+  Command.withSubcommands([daemonStart, daemonStop, daemonStatus])
+)
+
 const doctor = Command.make("doctor", {}, () =>
   Effect.gen(function*() {
     const bridge = yield* Bridge
@@ -178,5 +258,5 @@ const doctor = Command.make("doctor", {}, () =>
 
 export const bridge = Command.make("bridge").pipe(
   Command.withDescription("Bridge: one canonical model for coding-agent sessions"),
-  Command.withSubcommands([harnesses, sessions, show, events, watch, exportCommand, index, doctor])
+  Command.withSubcommands([harnesses, sessions, show, events, watch, exportCommand, index, daemon, doctor])
 )

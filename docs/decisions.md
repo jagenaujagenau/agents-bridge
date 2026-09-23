@@ -146,8 +146,18 @@ All six items left after v0.2 are now implemented:
 | 51 | Commit verification (`GitRepository` service, `--git`) | Derived commits found in the session's repository become `known`: by hash when git's output recorded one, else by exact subject within an hour of the event. The Node implementation runs `git` with argument arrays (no shell), validated hashes and `core.fsmonitor=false`, and treats any failure as "not found". Parsing heredoc messages (`-F - <<'EOF'`) and `git log --oneline` output raised recovered hashes from 121 to 175 of 228 real commits; 140 now verify. 18 of the rest belong to projects that no longer exist. |
 | 52 | Redaction covers session metadata | `redact: true` (`--redact` on `show`, `events`, `watch`, `export`) also masks the session title, agent label and metadata, since titles are usually the first prompt. Redaction runs after other enrichers, so derived events are covered too. |
 
+## Daemon (v0.5)
+
+| # | Change | Reason |
+|---|---|---|
+| 53 | `@agentbridge/daemon`: `runDaemon` / `serveDaemon` serve the embedded `Bridge` over a Unix socket; `DaemonBridge.layer` implements the same `BridgeShape` over it | Spec §71: an alternative backend with equivalent behavior, so applications switch deployment mode by swapping one layer. The adapter contract suite and a byte-for-byte comparison with the embedded backend run through the socket in the tests. |
+| 54 | Unix socket, owner-only (`0700` directory, `0600` socket), no TCP | Session history is private. Filesystem permissions are the access control; no port, token or DNS-rebinding surface. |
+| 55 | Plain HTTP + JSON / JSONL, errors as encoded `BridgeError`s | The protocol stays the wire format (spec §3.1): any language can talk to the daemon. A failure after a JSONL stream has started arrives as a final `{ "error": … }` line. `BackendUnavailable` is new for an unreachable backend. |
+| 56 | One shared tail per watched session (spec §70) | An `RcMap` keyed by session and read options holds a `PubSub` with an unbounded replay buffer, so every subscriber, early or late, gets existing events then new ones from a single tail. The tail stops two seconds after its last subscriber disconnects. Ceiling: a watched session's events stay in memory while it is watched. |
+| 57 | Enrichers over the wire | Functions cannot travel. The built-in git enricher, commit verification and redaction are sent as flags (they must run in order on the server); other enrichers run in the client after the stream arrives. |
+| 58 | CLI backend selection | `BRIDGE_DAEMON=auto` (default) uses a running daemon and otherwise runs in-process; `on` requires it; `off` never uses it. `bridge daemon start [--detach] \| stop \| status`. |
+
 ## Still open
 
-- **Daemon** (spec §71) and a shared live event bus: not needed by any current consumer.
 - **Turns** where no source records an end remain heuristic (Gemini CLI, Antigravity) or mostly
   inferred (Cursor).

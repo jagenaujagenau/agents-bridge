@@ -122,5 +122,5 @@ adapter was audited against real local history as well as fixtures.
 | Token usage | ✓ | ✓ | ✓ | ✓ | ✓ | – | – | – |
 | User shell commands | ✓ (`!cmd`, no exit code) | ✓ | – | – | – | – | – | – |
 | Timestamps | ✓ | ✓ | ✓ | ✓ | ✓ | user turns only | ✓ | receive time |
-| Live | `watch` (tail) | `watch` (tail) | `watch` (re-read) | `watch` (re-read) | `watch` (re-read) | `watch` (tail) | `watch` (tail) | `acpEvents`, `watch` (tail) |
+| Live (also via daemon, shared tail) | `watch` (tail) | `watch` (tail) | `watch` (re-read) | `watch` (re-read) | `watch` (re-read) | `watch` (tail) | `watch` (tail) | `acpEvents`, `watch` (tail) |
 | Session end | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded |

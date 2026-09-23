@@ -49,6 +49,11 @@ export class ExportError extends Schema.TaggedError<ExportError>()("ExportError"
   message: Schema.String
 }) {}
 
+/** A Bridge backend (e.g. a daemon) could not be reached or answered with something unreadable. */
+export class BackendUnavailable extends Schema.TaggedError<BackendUnavailable>()("BackendUnavailable", {
+  message: Schema.String
+}) {}
+
 export type AdapterError =
   | HarnessNotInstalled
   | SessionNotFound
@@ -58,10 +63,25 @@ export type AdapterError =
 
 export type BridgeError =
   | AdapterError
+  | BackendUnavailable
   | AdapterUnavailable
   | CapabilityNotSupported
   | StoreError
   | ExportError
+
+/** Every `BridgeError` as a schema, so errors cross process boundaries as plain JSON. */
+export const BridgeErrorSchema = Schema.Union([
+  HarnessNotInstalled,
+  SessionNotFound,
+  UnsupportedSessionVersion,
+  SessionParseError,
+  SessionReadError,
+  BackendUnavailable,
+  AdapterUnavailable,
+  CapabilityNotSupported,
+  StoreError,
+  ExportError
+])
 
 /** Render a platform/library failure as a message without leaking its object graph. */
 export const describeCause = (cause: unknown): string => {
