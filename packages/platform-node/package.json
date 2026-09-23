@@ -1,0 +1,28 @@
+{
+  "name": "@agentbridge/platform-node",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "effect": "4.0.0-rc.115",
+    "@effect/platform-node": "4.0.0-rc.115",
+    "@agentbridge/schema": "workspace:*",
+    "@agentbridge/core": "workspace:*",
+    "@agentbridge/adapter-claude-code": "workspace:*",
+    "@agentbridge/adapter-codex": "workspace:*",
+    "@agentbridge/store-memory": "workspace:*",
+    "@agentbridge/adapter-pi": "workspace:*",
+    "@agentbridge/adapter-opencode": "workspace:*",
+    "@agentbridge/adapter-gemini-cli": "workspace:*",
+    "@agentbridge/adapter-cursor": "workspace:*",
+    "@agentbridge/adapter-antigravity": "workspace:*",
+    "@agentbridge/adapter-acp": "workspace:*",
+    "@agentbridge/store-sqlite": "workspace:*"
+  },
+  "devDependencies": {
+    "@agentbridge/testing": "workspace:*"
+  }
+}

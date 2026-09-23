@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentbridge.dev/schemas/v1/import-warning.schema.json",
+  "$ref": "#/$defs/ImportWarning",
+  "$defs": {
+    "SourceReference": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "recordIndex": {
+          "type": "integer"
+        },
+        "nativeEventId": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "format"
+      ],
+      "additionalProperties": true
+    },
+    "ImportWarning": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceReference"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

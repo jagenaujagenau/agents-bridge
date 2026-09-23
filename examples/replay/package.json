@@ -1,0 +1,16 @@
+{
+  "name": "@agentbridge/example-replay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "effect": "4.0.0-rc.115",
+    "@agentbridge/core": "workspace:*",
+    "@agentbridge/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "@agentbridge/platform-node": "workspace:*",
+    "@agentbridge/testing": "workspace:*"
+  }
+}

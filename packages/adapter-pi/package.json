@@ -1,0 +1,17 @@
+{
+  "name": "@agentbridge/adapter-pi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "effect": "4.0.0-rc.115",
+    "@agentbridge/schema": "workspace:*",
+    "@agentbridge/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@agentbridge/testing": "workspace:*",
+    "@agentbridge/platform-node": "workspace:*",
+    "@effect/platform-node": "4.0.0-rc.115"
+  }
+}

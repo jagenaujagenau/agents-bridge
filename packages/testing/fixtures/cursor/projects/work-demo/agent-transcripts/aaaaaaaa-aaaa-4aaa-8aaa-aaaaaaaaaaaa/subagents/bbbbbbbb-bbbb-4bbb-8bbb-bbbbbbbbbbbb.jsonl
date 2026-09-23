@@ -1,0 +1,4 @@
+{"role":"user","message":{"content":[{"type":"text","text":"<user_query>\nFind all TODO comments in src/.\n</user_query>"}]}}
+{"role":"assistant","message":{"content":[{"type":"tool_use","name":"rg","input":{"pattern":"TODO","path":"src"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"There are no TODO comments in src/."}]}}
+{"type":"turn_ended","status":"error","error":"Connection lost"}

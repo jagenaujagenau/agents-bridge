@@ -1,0 +1,14 @@
+{
+  "id": "example:session-1",
+  "harness": { "id": "example", "name": "Example Harness", "version": "1.0.0" },
+  "status": "unknown",
+  "title": "Update the README",
+  "projectPath": "/work/demo",
+  "startedAt": "2026-09-13T17:00:00.000Z",
+  "updatedAt": "2026-09-13T17:05:00.000Z",
+  "capabilities": {
+    "history": true, "live": false, "resume": false, "toolCalls": true, "toolResults": true,
+    "reasoning": true, "tokenUsage": false, "fileEvents": true, "commandEvents": true
+  },
+  "metadata": { "model": "example-model", "git": { "branch": "main" } }
+}

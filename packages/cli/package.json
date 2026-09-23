@@ -1,0 +1,19 @@
+{
+  "name": "@agentbridge/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "effect": "4.0.0-rc.115",
+    "@effect/platform-node": "4.0.0-rc.115",
+    "@agentbridge/schema": "workspace:*",
+    "@agentbridge/core": "workspace:*",
+    "@agentbridge/platform-node": "workspace:*"
+  },
+  "bin": {
+    "bridge": "./src/bin.ts"
+  }
+}
