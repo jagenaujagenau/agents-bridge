@@ -2,9 +2,11 @@ import {
   type DecodedRecord,
   type Emission,
   emitPlan,
-  planList,
+  endTurn,
   makeLineDecoder,
+  planList,
   RecordScope,
+  startTurn,
   stringProp,
   titleFrom,
   warnUndecodable
@@ -112,6 +114,8 @@ export interface CursorState {
   readonly path: string
   readonly started: boolean
   readonly sawPrompt: boolean
+  /** The open turn, if any. */
+  readonly turn: string | undefined
   readonly projectPath: string | undefined
   /** The latest `<timestamp>` seen; Cursor records time only on user turns. */
   readonly lastTimestamp: string | undefined
@@ -123,6 +127,7 @@ export const initialState = (sessionId: SessionId, path: string, projectPath: st
   path,
   started: false,
   sawPrompt: false,
+  turn: undefined,
   projectPath,
   lastTimestamp: undefined,
   todos: new Map()
@@ -147,6 +152,7 @@ export const normalizeLine = (initial: CursorState, line: DecodedRecord<CursorRe
       const detail = typeof record.error === "string" ? record.error : record.error !== undefined ? JSON.stringify(record.error) : record.status
       s.event({ type: "harness.notice", certainty: "known", kind: "error", content: [{ type: "text", text: detail }] })
     }
+    state = { ...state, turn: endTurn(s, state.turn, record.status === "success" ? "completed" : record.status === undefined ? "unknown" : "failed") }
     return [state, s.emissions]
   }
 
@@ -172,6 +178,7 @@ export const normalizeLine = (initial: CursorState, line: DecodedRecord<CursorRe
       })
     }
     if (split.prompt !== undefined) {
+      state = { ...state, turn: startTurn(s, state.turn, String(line.index)) }
       s.event({ type: "user.message", certainty: "known", content: [{ type: "text", text: split.prompt }] })
       if (!state.sawPrompt) {
         s.metadata({ title: { value: titleFrom(split.prompt), priority: 10 } })

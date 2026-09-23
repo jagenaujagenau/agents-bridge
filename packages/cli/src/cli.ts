@@ -1,10 +1,18 @@
-import { Bridge, type BridgeError, gitEnricher, redactionEnricher, type SessionEnricher } from "@agentbridge/core"
+import { Bridge, type BridgeError, gitEnricher } from "@agentbridge/core"
 import { encodeEventLine, encodeSessionJson, PROTOCOL_VERSION, type SessionDescriptor, type SessionEvent } from "@agentbridge/schema"
 import { Console, Effect, Option, Stream } from "effect"
 import { Argument, Command, Flag } from "effect/unstable/cli"
 import { renderDescriptorRow, renderDetection, renderEvent, renderSession } from "./render.ts"
 
 const json = Flag.Boolean("json").pipe(Flag.withDefault(false), Flag.withDescription("Print machine-readable JSON"))
+const redact = Flag.Boolean("redact").pipe(Flag.withDefault(false), Flag.withDescription("Mask likely secrets (heuristic; not a guarantee)"))
+const git = Flag.Boolean("git").pipe(Flag.withDefault(false), Flag.withDescription("Derive git.commit events from git commit commands and verify them in the project repository"))
+const readOptions = (options: { readonly redact: boolean; readonly git: boolean }) => ({
+  enrichers: options.git ? [gitEnricher] : [],
+  verifyGit: options.git,
+  redact: options.redact
+})
+
 
 const describeError = (error: BridgeError): string => {
   switch (error._tag) {
@@ -71,10 +79,10 @@ const sessions = Command.make(
 
 const sessionId = Argument.String("session-id").pipe(Argument.withDescription("Canonical session ID"))
 
-const show = Command.make("show", { json, sessionId }, ({ json, sessionId }) =>
+const show = Command.make("show", { json, sessionId, redact }, ({ json, redact, sessionId }) =>
   reportErrors(Effect.gen(function*() {
     const bridge = yield* Bridge
-    const loaded = yield* bridge.sessions.get(sessionId)
+    const loaded = yield* bridge.sessions.get(sessionId, { redact })
     if (json) {
       return yield* Console.log(JSON.stringify({
         session: JSON.parse(encodeSessionJson(loaded.session)),
@@ -87,13 +95,6 @@ const show = Command.make("show", { json, sessionId }, ({ json, sessionId }) =>
 
 const jsonl = Flag.Boolean("jsonl").pipe(Flag.withDefault(false), Flag.withDescription("Print canonical events as JSONL"))
 
-const redact = Flag.Boolean("redact").pipe(Flag.withDefault(false), Flag.withDescription("Mask likely secrets (heuristic; not a guarantee)"))
-const git = Flag.Boolean("git").pipe(Flag.withDefault(false), Flag.withDescription("Derive git.commit events from git commit commands"))
-const enrichers = (options: { readonly redact: boolean; readonly git: boolean }): Array<SessionEnricher> => [
-  ...(options.git ? [gitEnricher] : []),
-  ...(options.redact ? [redactionEnricher] : [])
-]
-
 const printEvent = (jsonl: boolean) => (event: SessionEvent) => {
   if (jsonl) return Console.log(encodeEventLine(event))
   const line = renderEvent(event)
@@ -103,13 +104,13 @@ const printEvent = (jsonl: boolean) => (event: SessionEvent) => {
 const events = Command.make("events", { sessionId, jsonl, redact, git }, ({ jsonl, sessionId, ...options }) =>
   reportErrors(Effect.gen(function*() {
     const bridge = yield* Bridge
-    yield* bridge.sessions.events(sessionId, { enrichers: enrichers(options) }).pipe(Stream.runForEach(printEvent(jsonl)))
+    yield* bridge.sessions.events(sessionId, readOptions(options)).pipe(Stream.runForEach(printEvent(jsonl)))
   }))).pipe(Command.withDescription("Stream a session's canonical events"))
 
 const watch = Command.make("watch", { sessionId, jsonl, redact, git }, ({ jsonl, sessionId, ...options }) =>
   reportErrors(Effect.gen(function*() {
     const bridge = yield* Bridge
-    yield* bridge.sessions.watch(sessionId, { enrichers: enrichers(options) }).pipe(Stream.runForEach(printEvent(jsonl)))
+    yield* bridge.sessions.watch(sessionId, readOptions(options)).pipe(Stream.runForEach(printEvent(jsonl)))
   }))).pipe(Command.withDescription("Stream a session's events, then follow new ones until interrupted"))
 
 const exportCommand = Command.make(
@@ -124,7 +125,7 @@ const exportCommand = Command.make(
     reportErrors(Effect.gen(function*() {
       const bridge = yield* Bridge
       const destination = Option.getOrElse(out, () => `.bridge/${sessionId.replace(/[^A-Za-z0-9._-]+/g, "_")}`)
-      const result = yield* bridge.sessions.export(sessionId, destination, { enrichers: enrichers(options) })
+      const result = yield* bridge.sessions.export(sessionId, destination, readOptions(options))
       yield* Console.log(`exported ${result.manifest.eventCount} events to ${result.directory}`)
     }))
 ).pipe(Command.withDescription("Export a session as manifest.json + session.json + events.jsonl"))

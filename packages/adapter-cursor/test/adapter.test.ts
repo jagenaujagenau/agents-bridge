@@ -42,7 +42,7 @@ describe("cursor", () => {
       const { session } = yield* bridge.sessions.get(scenario.cursorSubagent)
       expect(session.parentSessionId).toBe(scenario.cursor)
       const events = yield* Stream.runCollect(bridge.sessions.events(scenario.cursorSubagent))
-      expect(events.at(-1)).toMatchObject({ type: "harness.notice", kind: "error" })
+      expect(events.slice(-2)).toMatchObject([{ type: "harness.notice", kind: "error" }, { type: "turn.completed", outcome: "failed" }])
     }).pipe(Effect.provide(layer)))
 
   it("parses Cursor's user turn wrapper and local timestamps", () => {

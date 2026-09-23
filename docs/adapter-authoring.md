@@ -118,9 +118,9 @@ adapter was audited against real local history as well as fixtures.
 | File read | known | inferred | known | known | known | inferred | inferred | known |
 | File create vs change | ✓ | ✓ | ✓ | change only | ✓ | inferred | change only, inferred | ✓ |
 | Plans | TodoWrite | update_plan | todowrite | – | write_todos | TodoWrite (merge, inferred) | – | ✓ |
-| Turns | ✓ | ✓ | – | – | – | – | – | ✓ |
+| Turns | ✓ | ✓ | ✓ | ✓ | end inferred | ✓ (end mostly inferred) | end inferred | ✓ |
 | Token usage | ✓ | ✓ | ✓ | ✓ | ✓ | – | – | – |
 | User shell commands | ✓ (`!cmd`, no exit code) | ✓ | – | – | – | – | – | – |
 | Timestamps | ✓ | ✓ | ✓ | ✓ | ✓ | user turns only | ✓ | receive time |
-| Live | `watch` (polling) | `watch` | `watch` | `watch` | `watch` | `watch` | `watch` | `acpEvents` transformer |
+| Live | `watch` (tail) | `watch` (tail) | `watch` (re-read) | `watch` (re-read) | `watch` (re-read) | `watch` (tail) | `watch` (tail) | `acpEvents`, `watch` (tail) |
 | Session end | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded |

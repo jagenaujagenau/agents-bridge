@@ -5,7 +5,7 @@ import type {
   SessionDescriptor,
   SessionId
 } from "@agentbridge/schema"
-import type { Effect, Stream } from "effect"
+import type { Duration, Effect, Stream } from "effect"
 import type { SessionNotFound, SessionReadError } from "./errors.ts"
 import type { Emission } from "./normalize.ts"
 
@@ -34,6 +34,16 @@ export interface HarnessAdapterShape {
   readonly listSessions: (options?: ListSessionsOptions) => Stream.Stream<SessionDescriptor, SessionReadError>
   /** Locate one session by canonical ID without listing everything when possible. */
   readonly resolve: (id: SessionId) => Effect.Effect<SessionDescriptor, SessionNotFound | SessionReadError>
-  /** Stream normalized emissions for one session, in source order. */
-  readonly read: (session: SessionDescriptor) => Stream.Stream<Emission, SessionReadError>
+  /**
+   * Stream normalized emissions for one session, in source order. With `follow`, adapters
+   * that set `follows` keep reading appended data until interrupted.
+   */
+  readonly read: (session: SessionDescriptor, options?: ReadSourceOptions) => Stream.Stream<Emission, SessionReadError>
+  /** `read` honors `follow` (append-only line sources). Others are watched by re-reading. */
+  readonly follows?: boolean | undefined
+}
+
+export interface ReadSourceOptions {
+  /** Keep reading appended data, polling at this interval. */
+  readonly follow?: Duration.Input | undefined
 }

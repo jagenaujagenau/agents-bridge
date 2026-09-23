@@ -9,7 +9,7 @@ import {
 } from "@agentbridge/schema"
 import { Effect, FileSystem, Option, Path, Stream } from "effect"
 import { SessionNotFound, type SessionReadError } from "./errors.ts"
-import type { HarnessAdapterShape, ListSessionsOptions } from "./HarnessAdapter.ts"
+import type { HarnessAdapterShape, ListSessionsOptions, ReadSourceOptions } from "./HarnessAdapter.ts"
 import { HostEnvironment } from "./HostEnvironment.ts"
 import type { Emission } from "./normalize.ts"
 import { cacheDiscovery, isWithinProject, findExecutable, listFilesRecursive, readHeadLines, statFile, toIso } from "./sources.ts"
@@ -126,7 +126,9 @@ export interface FileHistoryAdapterOptions {
   readonly mayBe?: (candidate: FileCandidate, nativeId: string) => boolean
   /** When several files classify to the same native ID, the highest priority wins. */
   readonly priority?: (candidate: FileCandidate) => number
-  readonly read: (descriptor: SessionDescriptor) => Stream.Stream<Emission, SessionReadError>
+  readonly read: (descriptor: SessionDescriptor, options?: ReadSourceOptions) => Stream.Stream<Emission, SessionReadError>
+  /** `read` honors `follow`. */
+  readonly follows?: boolean | undefined
 }
 
 /**
@@ -227,8 +229,9 @@ export const makeFileHistoryAdapter = (options: FileHistoryAdapterOptions) =>
       detect: detectHarness({ ...options.detect, harness, name: options.name }).pipe(Effect.provideContext(detectContext)),
       listSessions,
       resolve: (id) => resolve(id).pipe(Effect.catchTag("SessionNotFound", () => Effect.andThen(discovery.invalidate, resolve(id)))),
-      read: (descriptor) =>
-        options.read(descriptor).pipe(Stream.withSpan("bridge.normalize-session", { attributes: { harness } }))
+      follows: options.follows ?? false,
+      read: (descriptor, readOptions) =>
+        options.read(descriptor, readOptions).pipe(Stream.withSpan("bridge.normalize-session", { attributes: { harness } }))
     }
     return adapter
   })

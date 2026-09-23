@@ -137,10 +137,17 @@ All six items left after v0.2 are now implemented:
 | 47 | Incremental index | `SessionStore` stores a source fingerprint (path, size, mtime / row update time). `bridge index` skips unchanged sessions: 636 real sessions index in about 4 s, an unchanged re-run in about 1.3 s. |
 | 48 | Enrichers: `gitEnricher`, `redactionEnricher` | Opt-in (`--git`, `--redact` on `events`, `watch`, `export`). Git derives `git.commit {commit?, branch?, message?}` (`inferred`) from non-failed `git commit` commands, reading git's own `[branch hash] message` line when recorded. Redaction masks private keys, GitHub/AWS/Anthropic/OpenAI/Slack/Google keys, bearer tokens and `*_KEY=`-style assignments in content fields only. It is a heuristic and cannot guarantee that nothing sensitive remains. |
 
+## Closing the open items (v0.4)
+
+| # | Change | Evidence / reason |
+|---|---|---|
+| 49 | `watch` tails append-only sources from the last byte offset | Adapters that set `follows` (Claude Code, Codex, Cursor, Antigravity, ACP recordings) read appended bytes through the same normalizer state, so a poll costs only what was written. A partially flushed line stays buffered until its newline. A file that shrinks was rewritten and fails the stream. pi (its active branch can change), OpenCode (SQLite) and Gemini CLI (one JSON document rewritten in place) keep the re-read fallback. While following, facts that are only complete at the end of a source (Claude's per-message usage, a streaming ACP chunk) are emitted when the next record arrives. |
+| 50 | Turns for every harness | Start at each prompt (`known`). End where the source records it: OpenCode `finish`/`error`, pi `stopReason`, Cursor `turn_ended`. Gemini CLI and Antigravity record no end, so a model reply that calls no tools ends the turn as `inferred`. A prompt arriving while a turn is open closes it as `inferred` / `unknown`. Cursor records `turn_ended` for only 36 of its 1,115 local turns, so most Cursor turns close that way. |
+| 51 | Commit verification (`GitRepository` service, `--git`) | Derived commits found in the session's repository become `known`: by hash when git's output recorded one, else by exact subject within an hour of the event. The Node implementation runs `git` with argument arrays (no shell), validated hashes and `core.fsmonitor=false`, and treats any failure as "not found". Parsing heredoc messages (`-F - <<'EOF'`) and `git log --oneline` output raised recovered hashes from 121 to 175 of 228 real commits; 140 now verify. 18 of the rest belong to projects that no longer exist. |
+| 52 | Redaction covers session metadata | `redact: true` (`--redact` on `show`, `events`, `watch`, `export`) also masks the session title, agent label and metadata, since titles are usually the first prompt. Redaction runs after other enrichers, so derived events are covered too. |
+
 ## Still open
 
-- **Byte-offset tailing** for `watch` on large sessions.
-- **Turns** for OpenCode, pi, Gemini CLI, Cursor and Antigravity: consumers derive them from
-  `user.message` until a source records boundaries.
-- **Git certainty upgrade** (spec §42): verify derived commits against the repository.
-- **Redacting session metadata** (titles come from prompts); redaction covers events only.
+- **Daemon** (spec §71) and a shared live event bus: not needed by any current consumer.
+- **Turns** where no source records an end remain heuristic (Gemini CLI, Antigravity) or mostly
+  inferred (Cursor).

@@ -6,6 +6,7 @@ import {
   harnessRoot,
   HostEnvironment,
   type HarnessAdapterShape,
+  type ReadSourceOptions,
   listFilesRecursive,
   type ListSessionsOptions,
   parseJson,
@@ -139,14 +140,15 @@ export class CodexAdapter extends Context.Service<CodexAdapter, HarnessAdapterSh
         return yield* describe(file)
       })
 
-    const read = (descriptor: SessionDescriptor) =>
-      readLines(fs, harness, descriptor.sourcePath).pipe(
+    const read = (descriptor: SessionDescriptor, readOptions?: ReadSourceOptions) =>
+      readLines(fs, harness, descriptor.sourcePath, { follow: readOptions?.follow }).pipe(
         Stream.map(decodeLine),
         Stream.mapAccum(() => initialState(descriptor.id, descriptor.sourcePath), normalizeLine),
         Stream.withSpan("bridge.normalize-session", { attributes: { harness, format: FORMAT } })
       )
 
     const adapter: HarnessAdapterShape = {
+      follows: true,
       id: harness,
       name: "Codex",
       capabilities: CodexCapabilities,

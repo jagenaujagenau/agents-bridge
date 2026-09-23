@@ -7,6 +7,7 @@ import {
   harnessRoot,
   HostEnvironment,
   type HarnessAdapterShape,
+  type ReadSourceOptions,
   listFilesRecursive,
   type ListSessionsOptions,
   parseJson,
@@ -224,10 +225,10 @@ export class ClaudeCodeAdapter extends Context.Service<ClaudeCodeAdapter, Harnes
       )
     }
 
-    const read = (descriptor: SessionDescriptor): Stream.Stream<Emission, SessionReadError> =>
+    const read = (descriptor: SessionDescriptor, readOptions?: ReadSourceOptions): Stream.Stream<Emission, SessionReadError> =>
       Stream.concat(
         sidecarMetadata(descriptor),
-        readLines(fs, harness, descriptor.sourcePath).pipe(
+        readLines(fs, harness, descriptor.sourcePath, { follow: readOptions?.follow }).pipe(
           Stream.map(decodeLine),
           Stream.mapAccum(
             () => initialState(descriptor.id, descriptor.sourcePath),
@@ -238,6 +239,7 @@ export class ClaudeCodeAdapter extends Context.Service<ClaudeCodeAdapter, Harnes
       ).pipe(Stream.withSpan("bridge.normalize-session", { attributes: { harness, format: FORMAT } }))
 
     const adapter: HarnessAdapterShape = {
+      follows: true,
       id: harness,
       name: "Claude Code",
       capabilities: ClaudeCodeCapabilities,

@@ -63,6 +63,7 @@ Normalizer state lives in the `mapAccum` accumulator (open tool calls, staged
 | each adapter (`ClaudeCodeAdapter`, `CodexAdapter`, `OpenCodeAdapter`, `PiAdapter`, `GeminiCliAdapter`, `CursorAdapter`, `AntigravityAdapter`, `AcpRecordingAdapter`) | `*.layer` (needs `HostEnvironment`, `VersionProbe`, `FileSystem`, `Path`; OpenCode also `SqliteReader`) |
 | `HostEnvironment` | `layerConfig` (process environment via `Config`), `layerWithOverrides({...})`, or `layer({...})` for tests |
 | `VersionProbe` | `NodeVersionProbe` (spawns `--version` with a timeout) or `VersionProbe.layerNoop` |
+| `GitRepository` | `NodeGitRepository` (`git` binary, argument arrays, fsmonitor off); optional |
 | `SqliteReader` | `NodeSqliteReader` (read-only `node:sqlite`, scoped per stream) |
 | `SessionStore` | `MemorySessionStore.layer` or `SqliteSessionStore.layer(file)` (lazy `node:sqlite`) |
 
@@ -95,9 +96,9 @@ program.pipe(Effect.provide(NodeBridge.layer()), Effect.runPromise)
 ## Reading modes
 
 - `events(id, { enrichers? })`: one pass over the source.
-- `watch(id, { interval?, enrichers? })`: existing events, then new ones. History adapters are polled by
-  file (and SQLite WAL) size and mtime; on change the source is re-read and events past the last
-  sequence are emitted.
+- `watch(id, { interval?, enrichers?, verifyGit?, redact? })`: existing events, then new ones. Adapters
+  with `follows` are tailed from the last byte offset through the same normalizer; others are
+  re-read when their file (or SQLite WAL) changes, emitting events past the last sequence.
 - `export(id, dir, { enrichers? })` / `index(id, { force? })`: one pass that folds the session and writes
   events together. `index` skips sources whose fingerprint matches the stored one.
 
@@ -120,5 +121,4 @@ session ID and counts, never prompt or file content.
 
 ## Not built yet (by design)
 
-Daemon, byte-offset tailing for `watch`, repository verification of derived commits. Live ACP
-traffic is consumed directly through `acpEvents`.
+Daemon. Live ACP traffic is consumed directly through `acpEvents`.

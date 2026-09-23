@@ -1,4 +1,9 @@
-import { type Emission, RecordScope, stringProp, titleFrom } from "@agentbridge/core"
+import {
+  type Emission,
+  RecordScope,
+  stringProp,
+  titleFrom
+} from "@agentbridge/core"
 import {
   type CommandId,
   type CommandOutcome,

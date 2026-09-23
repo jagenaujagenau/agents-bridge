@@ -1,7 +1,7 @@
-import type { SessionEvent } from "@agentbridge/schema"
+import type { Session, SessionEvent } from "@agentbridge/schema"
 import { describe, expect, it } from "@effect/vitest"
-import { Effect, Stream } from "effect"
-import { enrichStream, gitEnricher, redactionEnricher, redactText } from "../src/index.ts"
+import { Effect, Option, Stream } from "effect"
+import { commitMessage, commitSubject, enrichStream, gitEnricher, type GitRepositoryShape, redactionEnricher, redactSession, redactText, verifyGitCommit } from "../src/index.ts"
 
 const base = (sequence: number) => ({
   id: `evt_${sequence}`,
@@ -49,5 +49,62 @@ describe("redaction", () => {
       { ...base(0), type: "command.started", commandId: "sk-ant-" + "b".repeat(30), command: "curl -H 'Bearer " + "y".repeat(30) + "'" }
     ], [redactionEnricher])
     expect(event).toMatchObject({ commandId: "sk-ant-" + "b".repeat(30), command: "curl -H 'Bearer [REDACTED:bearer-token]'" })
+  })
+})
+
+describe("verifyGitCommit", () => {
+  const fake: GitRepositoryShape = {
+    hasCommit: (_, commit) => Effect.succeed(commit === "1a2b3c4"),
+    findCommit: (_, subject) => Effect.succeed(subject === "wip" ? Option.some({ commit: "9f9f9f9", branch: "main" }) : Option.none())
+  }
+  const commit = (fields: object) =>
+    ({ ...base(0), type: "git.commit", certainty: "inferred", timestamp: "2026-09-01T10:00:00.000Z", ...fields }) as SessionEvent
+  const verify = (event: SessionEvent, project: string | undefined) => Effect.runSync(verifyGitCommit(fake, project)(event))
+
+  it("marks commits found in the repository as known", () => {
+    expect(verify(commit({ commit: "1a2b3c4" }), "/repo")).toMatchObject({ certainty: "known", commit: "1a2b3c4" })
+    expect(verify(commit({ commit: "0000000" }), "/repo")).toMatchObject({ certainty: "inferred" })
+    expect(verify(commit({ message: "wip" }), "/repo")).toMatchObject({ certainty: "known", commit: "9f9f9f9", branch: "main" })
+    expect(verify(commit({ message: "other" }), "/repo")).toMatchObject({ certainty: "inferred" })
+    expect(verify(commit({ commit: "1a2b3c4" }), undefined)).toMatchObject({ certainty: "inferred" })
+    expect(verify(commit({ commit: "--upload-pack=x" }), "/repo")).toMatchObject({ certainty: "inferred" })
+  })
+})
+
+describe("redactSession", () => {
+  it("masks title, agent label and metadata strings", () => {
+    const key = "sk-ant-" + "c".repeat(30)
+    const session = redactSession({
+      id: "t:1",
+      harness: { id: "t", name: "T" },
+      status: "unknown",
+      title: `use ${key}`,
+      projectPath: "/p",
+      capabilities: { history: true, live: false, resume: false, toolCalls: true, toolResults: true, reasoning: false, tokenUsage: false, fileEvents: false, commandEvents: false },
+      metadata: { note: { deep: [key] }, model: "m" }
+    } as unknown as Session)
+    expect(session).toMatchObject({
+      title: "use [REDACTED:anthropic-key]",
+      projectPath: "/p",
+      metadata: { note: { deep: ["[REDACTED:anthropic-key]"] }, model: "m" }
+    })
+  })
+})
+
+describe("commit messages", () => {
+  it("reads heredoc, multi-line and flag forms", () => {
+    expect(commitMessage("git add . && git commit -q -F - <<'EOF'\nfeat: x\n\nbody\nEOF")).toBe("feat: x\n\nbody")
+    expect(commitMessage(`git commit -m "$(cat <<'EOF'\nfix: y\nEOF\n)"`)).toBe("fix: y")
+    expect(commitMessage(`git commit -q -am "copy: z\n\nCo-Authored-By: a"`)).toBe("copy: z\n\nCo-Authored-By: a")
+    expect(commitMessage("git commit --amend --no-edit")).toBeUndefined()
+    expect(commitSubject("copy: z\n\nbody")).toBe("copy: z")
+  })
+
+  it("takes the hash from `git log --oneline` output when git commit ran quietly", () => {
+    const [, commit] = run([
+      { ...base(0), type: "command.started", commandId: "c1", command: "git commit -q -m \"feat: x\n\nbody\" && git log --oneline -1" },
+      { ...base(1), type: "command.completed", commandId: "c1", outcome: "succeeded", stdout: "0b0addc feat: x" }
+    ]).slice(1)
+    expect(commit).toMatchObject({ type: "git.commit", commit: "0b0addc", message: "feat: x\n\nbody" })
   })
 })

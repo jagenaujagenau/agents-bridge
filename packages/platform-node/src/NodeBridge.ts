@@ -19,6 +19,7 @@ import { SqliteSessionStore } from "@agentbridge/store-sqlite"
 import { NodeServices } from "@effect/platform-node"
 import { Duration, Effect, Layer, Option } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
+import { NodeGitRepository } from "./NodeGitRepository.ts"
 import { NodeSqliteReader } from "./NodeSqliteReader.ts"
 
 /** Runs `<binary> --version` with a short timeout. Any failure means "version unknown". */
@@ -99,6 +100,7 @@ export const layer = (options: NodeBridgeOptions = {}) => {
   return Bridge.layer.pipe(
     Layer.provide(Layer.mergeAll(
       HarnessRegistry.layer(adapters),
+      NodeGitRepository,
       options.database === undefined ? MemorySessionStore.layer : SqliteSessionStore.layer(options.database)
     )),
     Layer.provide(adapterLayers),

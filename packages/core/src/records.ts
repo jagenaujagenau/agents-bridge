@@ -126,3 +126,32 @@ export const usageFields = (fields: {
   readonly outputTokens?: number
   readonly reasoningTokens?: number
 }
+
+/**
+ * Open a turn. A turn still open when a new prompt arrives had no recorded end, so it is
+ * closed as `inferred` / `unknown`. Returns the new open turn ID.
+ */
+export const startTurn = (scope: RecordScope, open: string | undefined, turnId: string): string => {
+  if (open !== undefined) scope.event({ type: "turn.completed", certainty: "inferred", turnId: open, outcome: "unknown" })
+  scope.event({ type: "turn.started", certainty: "known", turnId })
+  return turnId
+}
+
+/** Close the open turn, if any. Returns `undefined` (no open turn). */
+export const endTurn = (
+  scope: RecordScope,
+  open: string | undefined,
+  outcome: "completed" | "interrupted" | "failed" | "unknown",
+  options: { readonly certainty?: "known" | "inferred"; readonly durationMs?: number | undefined } = {}
+): undefined => {
+  if (open !== undefined) {
+    scope.event({
+      type: "turn.completed",
+      certainty: options.certainty ?? "known",
+      turnId: open,
+      outcome,
+      ...(options.durationMs !== undefined ? { durationMs: options.durationMs } : {})
+    })
+  }
+  return undefined
+}

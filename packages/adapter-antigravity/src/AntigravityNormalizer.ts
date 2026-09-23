@@ -1,4 +1,13 @@
-import { type Emission, parseJson, RecordScope, type SourceLine, stringProp, titleFrom } from "@agentbridge/core"
+import {
+  type Emission,
+  endTurn,
+  parseJson,
+  RecordScope,
+  type SourceLine,
+  startTurn,
+  stringProp,
+  titleFrom
+} from "@agentbridge/core"
 import type { CommandId, EventId, SessionId, ToolCallId, ToolKind } from "@agentbridge/schema"
 import { Option, Schema } from "effect"
 import { AntigravityStep, type AntigravityToolCall } from "./schema/AntigravityRecord.ts"
@@ -75,6 +84,8 @@ export interface AntigravityState {
   readonly path: string
   readonly started: boolean
   readonly sawPrompt: boolean
+  /** The open turn, if any. */
+  readonly turn: string | undefined
   readonly projectPath: string | undefined
   /** Planner tool calls still waiting for an output step, oldest first. */
   readonly open: ReadonlyArray<OpenCall>
@@ -85,6 +96,7 @@ export const initialState = (sessionId: SessionId, path: string): AntigravitySta
   path,
   started: false,
   sawPrompt: false,
+  turn: undefined,
   projectPath: undefined,
   open: []
 })
@@ -129,6 +141,7 @@ export const normalizeLine = (initial: AntigravityState, line: DecodedStep): Ste
         s.event({ type: "harness.notice", certainty: "known", kind: "injected_context", content: [{ type: "text", text: context }] })
       }
       if (prompt.length > 0) {
+        state = { ...state, turn: startTurn(s, state.turn, s.options.nativeEventId ?? String(line.index)) }
         s.event({ type: "user.message", certainty: "known", content: [{ type: "text", text: prompt }] })
         if (!state.sawPrompt) {
           s.metadata({ title: { value: titleFrom(prompt), priority: 10 } })
@@ -142,6 +155,8 @@ export const normalizeLine = (initial: AntigravityState, line: DecodedStep): Ste
         s.event({ type: "agent.message", certainty: "known", content: [{ type: "text", text: content }] })
       }
       for (const call of step.tool_calls ?? []) state = startCall(state, s, call)
+      // No recorded turn end; a planner response that calls no tools is where the agent stopped.
+      if ((step.tool_calls ?? []).length === 0) state = { ...state, turn: endTurn(s, state.turn, "completed", { certainty: "inferred" }) }
       return [state, s.emissions]
     }
     default:

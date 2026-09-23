@@ -1,5 +1,5 @@
 import type { HarnessId } from "@agentbridge/schema"
-import { Effect, FileSystem, Option, Path, Stream } from "effect"
+import { type Duration, Effect, FileSystem, Option, Path, Schedule, Stream } from "effect"
 import { describeCause, SessionReadError } from "./errors.ts"
 
 /**
@@ -17,14 +17,43 @@ export interface SourceLine {
  * becomes U+FFFD, so one bad byte cannot make a session unreadable. Blank
  * lines keep their index so record indices match physical line numbers.
  */
-export const readLines = (fs: FileSystem.FileSystem, harness: HarnessId, path: string, bytesToRead?: number) =>
-  fs.stream(path, { chunkSize: 64 * 1024, bytesToRead }).pipe(
+export const readLines = (
+  fs: FileSystem.FileSystem,
+  harness: HarnessId,
+  path: string,
+  options?: { readonly bytesToRead?: number | undefined; readonly follow?: Duration.Input | undefined }
+) =>
+  (options?.follow === undefined
+    ? fs.stream(path, { chunkSize: 64 * 1024, bytesToRead: options?.bytesToRead })
+    : followBytes(fs, harness, path, options.follow)).pipe(
     Stream.decodeText(),
     Stream.splitLines,
     Stream.zipWithIndex,
     Stream.map(([line, index]): SourceLine => ({ index, line })),
     Stream.mapError((cause) => new SessionReadError({ harness, path, message: describeCause(cause) }))
   )
+
+/**
+ * The file's bytes, then bytes appended to it, polled every `interval`, until interrupted.
+ * Reads continue from the last byte offset, so each poll costs only what was appended; a
+ * partial last line stays buffered in `splitLines` until its newline arrives. A file that
+ * shrinks was rewritten, not appended to, and fails the stream.
+ */
+export const followBytes = (fs: FileSystem.FileSystem, harness: HarnessId, path: string, interval: Duration.Input) =>
+  Stream.suspend(() => {
+    let offset = 0
+    const appended = Stream.unwrap(Effect.gen(function*() {
+      const size = Number((yield* fs.stat(path)).size)
+      if (size < offset) {
+        return yield* new SessionReadError({ harness, path, message: "The source shrank; it was rewritten rather than appended to" })
+      }
+      if (size === offset) return Stream.empty
+      const start = offset
+      offset = size
+      return fs.stream(path, { chunkSize: 64 * 1024, offset: start, bytesToRead: size - start })
+    }))
+    return appended.pipe(Stream.repeat(Schedule.spaced(interval)))
+  })
 
 /** Read only the first `limit` lines of a file. For cheap listing. */
 export const readHeadLines = (fs: FileSystem.FileSystem, harness: HarnessId, path: string, limit: number) =>

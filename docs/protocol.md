@@ -125,7 +125,7 @@ Every event has the base fields:
 | `file.created` | `path`, `diff?`, `language?` | emitted only after the tool result proves success |
 | `file.changed` | `path`, `previousPath?`, `diff?`, … | idem |
 | `file.deleted` | `path` | idem |
-| `git.commit` | `commit?`, `branch?`, `message?` | only from the opt-in git enricher; always `inferred` |
+| `git.commit` | `commit?`, `branch?`, `message?` | only from the opt-in git enricher; `inferred`, or `known` once verified against the session's repository |
 | `custom.<ns>.<event>` | `payload` | provider extension; safe to ignore |
 
 `content` is an array of blocks: `{type:"text",text}`, `{type:"code",code,language?}`,
@@ -170,7 +170,8 @@ They run on canonical events only, may add derived events (`git.commit`, with `d
 stable ID anchored on the source event), and renumber `sequence` so it stays contiguous. An
 enriched stream is therefore a different stream: IDs of original events are unchanged, sequences
 may shift. Redaction replaces likely secrets in content fields with `[REDACTED:<kind>]`; identity,
-ordering and provenance fields are never touched.
+ordering and provenance fields are never touched. With `redact`, the session's title, agent label
+and metadata are masked the same way.
 
 ## Unknown events (forward compatibility)
 

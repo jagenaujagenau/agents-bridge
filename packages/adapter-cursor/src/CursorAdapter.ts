@@ -109,8 +109,9 @@ export class CursorAdapter extends Context.Service<CursorAdapter, HarnessAdapter
       enrich: (candidate) =>
         Effect.map(projectPathOf(path.relative(projectsDir, candidate.path).split(path.sep)[0] ?? ""), (projectPath) =>
           projectPath !== undefined ? { projectPath } : {}),
-      read: (descriptor) =>
-        readLines(fs, harness, descriptor.sourcePath).pipe(
+      follows: true,
+      read: (descriptor, readOptions) =>
+        readLines(fs, harness, descriptor.sourcePath, { follow: readOptions?.follow }).pipe(
           Stream.map(decodeLine),
           Stream.mapAccum(() => initialState(descriptor.id, descriptor.sourcePath, descriptor.projectPath), normalizeLine)
         )

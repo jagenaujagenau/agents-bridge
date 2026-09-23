@@ -1,15 +1,17 @@
 import {
   type Emission,
   emitPlan,
-  planList,
+  endTurn,
   makeRecordDecoder,
   parseJson,
+  planList,
   RecordScope,
+  startTurn,
   stringProp,
   titleFrom,
-  warnUndecodable,
   tokenCount,
-  usageFields
+  usageFields,
+  warnUndecodable
 } from "@agentbridge/core"
 import type { CommandId, CommandOutcome, ContentBlock, EventId, NoticeKind, SessionId, ToolCallId, ToolKind } from "@agentbridge/schema"
 import { Option, Schema } from "effect"
@@ -66,6 +68,8 @@ export interface OpenCodeState {
   readonly database: string
   readonly started: boolean
   readonly sawPrompt: boolean
+  /** The open turn, if any. */
+  readonly turn: string | undefined
   readonly cwd: string | undefined
 }
 
@@ -74,6 +78,7 @@ export const initialState = (sessionId: SessionId, database: string, cwd: string
   database,
   started: false,
   sawPrompt: false,
+  turn: undefined,
   cwd
 })
 
@@ -195,6 +200,7 @@ export const normalizeGroup = (initial: OpenCodeState, group: MessageGroup): Ste
       s.event({ type: "harness.notice", certainty: "known", kind: notice.kind, content: [{ type: "text", text: notice.text }] })
     }
     if (prompt.length > 0) {
+      state = { ...state, turn: startTurn(s, state.turn, group.messageId) }
       s.event({ type: "user.message", certainty: "known", content: prompt })
       const first = prompt.find((b) => b.type === "text")
       if (!state.sawPrompt && first?.type === "text") {
@@ -215,6 +221,13 @@ export const normalizeGroup = (initial: OpenCodeState, group: MessageGroup): Ste
       kind: error.name === "MessageAbortedError" ? "interruption" : "error",
       content: [{ type: "text", text: error.data?.message ?? error.name }]
     })
+    emissions.push(...s.emissions)
+  }
+  const finish = message.finish ?? undefined
+  if (error?.name || (finish !== undefined && finish !== "tool-calls")) {
+    const s = scopeFor(group.messageId, iso(message.time?.completed) ?? created)
+    const outcome = error?.name === "MessageAbortedError" ? "interrupted" : error?.name ? "failed" : "completed"
+    state = { ...state, turn: endTurn(s, state.turn, outcome) }
     emissions.push(...s.emissions)
   }
   return [state, [...head.emissions, ...emissions]]

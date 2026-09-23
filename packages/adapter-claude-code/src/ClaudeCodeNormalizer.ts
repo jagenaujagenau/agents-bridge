@@ -1,4 +1,11 @@
-import { type Emission, emitPlan, planList, RecordScope, tokenCount, usageFields } from "@agentbridge/core"
+import {
+  type Emission,
+  emitPlan,
+  planList,
+  RecordScope,
+  tokenCount,
+  usageFields
+} from "@agentbridge/core"
 import {
   type CommandId,
   type ContentBlock,

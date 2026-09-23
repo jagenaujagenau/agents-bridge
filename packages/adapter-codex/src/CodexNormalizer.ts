@@ -1,4 +1,12 @@
-import { type Emission, parseJson, RecordScope, emitPlan, planList, tokenCount, usageFields } from "@agentbridge/core"
+import {
+  type Emission,
+  emitPlan,
+  parseJson,
+  planList,
+  RecordScope,
+  tokenCount,
+  usageFields
+} from "@agentbridge/core"
 import {
   type CommandId,
   type CommandOutcome,

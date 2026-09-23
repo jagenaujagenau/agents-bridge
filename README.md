@@ -30,7 +30,7 @@ pnpm bridge sessions --harness codex
 pnpm bridge show <session-id>
 pnpm bridge events <session-id>          # human-readable
 pnpm bridge events <session-id> --jsonl  # canonical JSONL
-pnpm bridge events <session-id> --git --redact   # opt-in enrichers
+pnpm bridge events <session-id> --git --redact   # derive + verify commits, mask secrets
 pnpm bridge watch <session-id>           # existing events, then new ones as the session grows
 pnpm bridge index                        # import everything into the SQLite index ($BRIDGE_DB)
 pnpm bridge export <session-id> --out ./out
@@ -128,4 +128,7 @@ no local history was available. See [docs/decisions.md](docs/decisions.md).
 v0.3 adds turns, token usage, user shell commands, plans from todo tools, `bridge watch` for every
 harness, the SQLite index and the git / redaction enrichers.
 
-Not built yet: a daemon, byte-offset tailing for `watch`, and repository verification of derived commits.
+v0.4 tails growing sessions from the last byte offset, emits turns for every harness, verifies
+derived commits against the repository and redacts session metadata.
+
+Not built yet: a daemon.

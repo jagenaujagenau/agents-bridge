@@ -62,8 +62,9 @@ export class AntigravityAdapter extends Context.Service<AntigravityAdapter, Harn
         const first = Option.getOrUndefined(Option.flatMap(Option.fromNullishOr(head[0]), parseJson))
         return { startedAt: stringProp(first, "created_at") }
       },
-      read: (descriptor) =>
-        readLines(fs, harness, descriptor.sourcePath).pipe(
+      follows: true,
+      read: (descriptor, readOptions) =>
+        readLines(fs, harness, descriptor.sourcePath, { follow: readOptions?.follow }).pipe(
           Stream.map(decodeLine),
           Stream.mapAccum(() => initialState(descriptor.id, descriptor.sourcePath), normalizeLine)
         )

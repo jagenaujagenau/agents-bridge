@@ -26,7 +26,8 @@ import type { HarnessAdapterShape, ListSessionsOptions } from "./HarnessAdapter.
 import { HarnessRegistry } from "./HarnessRegistry.ts"
 import { type LoadedSession, loadSession, sequenceEvents } from "./normalize.ts"
 import { SessionStore } from "./SessionStore.ts"
-import { enrichment, enrichStream, type SessionEnricher } from "./enrich.ts"
+import { enrichment, enrichStream, redactionEnricher, redactSession, type SessionEnricher } from "./enrich.ts"
+import { GitRepository, verifyGitCommit } from "./GitRepository.ts"
 
 export interface HarnessInfo {
   readonly id: HarnessId
@@ -51,7 +52,23 @@ export const sourceFingerprint = (descriptor: SessionDescriptor): string =>
 export interface ReadOptions {
   /** Opt-in enrichers (e.g. `gitEnricher`, `redactionEnricher`), applied in order. */
   readonly enrichers?: ReadonlyArray<SessionEnricher> | undefined
+  /**
+   * Check derived `git.commit` events against the session's repository and mark the ones
+   * found `known`. Needs a `GitRepository` service; without one this is a no-op.
+   */
+  readonly verifyGit?: boolean | undefined
+  /**
+   * Mask likely secrets in event content and in session title and metadata. A heuristic:
+   * it reduces exposure, it cannot guarantee nothing sensitive remains.
+   */
+  readonly redact?: boolean | undefined
 }
+
+/** Enrichers for a read, with redaction last so it also covers derived events. */
+const enrichersOf = (options: ReadOptions | undefined): ReadonlyArray<SessionEnricher> => [
+  ...(options?.enrichers ?? []),
+  ...(options?.redact === true ? [redactionEnricher] : [])
+]
 
 export interface WatchOptions {
   /** How often the source is checked for changes. Default 1 second. */
@@ -69,7 +86,7 @@ export interface BridgeShape {
     ) => Stream.Stream<SessionDescriptor, BridgeError>
     readonly describe: (id: string) => Effect.Effect<SessionDescriptor, BridgeError>
     /** Load session metadata and import warnings. Reads the source once. */
-    readonly get: (id: string) => Effect.Effect<LoadedSession, BridgeError>
+    readonly get: (id: string, options?: { readonly redact?: boolean | undefined }) => Effect.Effect<LoadedSession, BridgeError>
     /** The canonical ordered event stream. */
     readonly events: (id: string, options?: ReadOptions) => Stream.Stream<SessionEvent, BridgeError>
     /**
@@ -105,6 +122,16 @@ export class Bridge extends Context.Service<Bridge, BridgeShape>()("@agentbridge
     const store = yield* SessionStore
     const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
+    const gitRepository = yield* Effect.serviceOption(GitRepository)
+    const verifier = (descriptor: SessionDescriptor, options: ReadOptions | undefined) =>
+      options?.verifyGit === true && Option.isSome(gitRepository)
+        ? verifyGitCommit(gitRepository.value, descriptor.projectPath)
+        : undefined
+    const verifyStream = (descriptor: SessionDescriptor, options: ReadOptions | undefined) =>
+    <E, R>(events: Stream.Stream<SessionEvent, E, R>): Stream.Stream<SessionEvent, E, R> => {
+      const verify = verifier(descriptor, options)
+      return verify === undefined ? events : events.pipe(Stream.mapEffect(verify))
+    }
 
     const locate = (id: string): Effect.Effect<
       { readonly adapter: HarnessAdapterShape; readonly descriptor: SessionDescriptor },
@@ -121,7 +148,7 @@ export class Bridge extends Context.Service<Bridge, BridgeShape>()("@agentbridge
       capabilities: sessionCapabilities(adapter.capabilities)
     })
 
-    const get = (id: string) =>
+    const get = (id: string, options?: { readonly redact?: boolean | undefined }) =>
       locate(id).pipe(
         Effect.flatMap(({ adapter, descriptor }) =>
           loadSession(descriptor, baseOf(adapter), adapter.read(descriptor)).pipe(
@@ -134,27 +161,41 @@ export class Bridge extends Context.Service<Bridge, BridgeShape>()("@agentbridge
             )
           )
         ),
+        Effect.map((loaded) => (options?.redact === true ? { ...loaded, session: redactSession(loaded.session) } : loaded)),
         Effect.withSpan("bridge.load-session", { attributes: { session_id: id } })
       )
 
     const events = (id: string, options?: ReadOptions): Stream.Stream<SessionEvent, BridgeError> =>
       Stream.unwrap(
         Effect.map(locate(id), ({ adapter, descriptor }) =>
-          adapter.read(descriptor).pipe(sequenceEvents(descriptor.id), enrichStream(options?.enrichers ?? []))
+          adapter.read(descriptor).pipe(
+            sequenceEvents(descriptor.id),
+            enrichStream(enrichersOf(options)),
+            verifyStream(descriptor, options)
+          )
         )
       )
 
     /**
-     * Tail a history source by re-reading it when its file (or SQLite WAL) changes and emitting
-     * events past the last sequence seen. Correct because normalization is deterministic and
-     * sources are append-only; an event whose content changes after emission is not re-sent.
+     * Follow a session as it grows. Append-only line sources (`adapter.follows`) are tailed from the
+     * last byte offset through the same normalizer, so each poll costs only what was appended.
+     * Other sources (a SQLite database, a JSON document rewritten in place) are re-read when their
+     * file (or SQLite WAL) changes, emitting events past the last sequence seen; that is correct
+     * because normalization is deterministic, and costs a full read per change.
      */
-    // ponytail: full re-read per change, O(session) per poll; add byte-offset tailing if large live sessions lag.
     const watch = (id: string, options?: WatchOptions & ReadOptions): Stream.Stream<SessionEvent, BridgeError> =>
       Stream.unwrap(Effect.gen(function*() {
         const { adapter, descriptor } = yield* locate(id)
         if (!adapter.capabilities.historicalSessions) {
           return Stream.fail(new CapabilityNotSupported({ sessionId: descriptor.id, capability: "watch" })) as Stream.Stream<SessionEvent, BridgeError>
+        }
+        const interval = options?.interval ?? "1 second"
+        if (adapter.follows === true) {
+          return adapter.read(descriptor, { follow: interval }).pipe(
+            sequenceEvents(descriptor.id),
+            enrichStream(enrichersOf(options)),
+            verifyStream(descriptor, options)
+          ) as Stream.Stream<SessionEvent, BridgeError>
         }
         const fingerprint = Effect.forEach([descriptor.sourcePath, `${descriptor.sourcePath}-wal`], (file) =>
           fs.stat(file).pipe(
@@ -172,7 +213,11 @@ export class Bridge extends Context.Service<Bridge, BridgeShape>()("@agentbridge
             Stream.tap((event) => Effect.sync(() => { next = event.sequence + 1 }))
           )
         }))
-        return poll.pipe(Stream.repeat(Schedule.spaced(options?.interval ?? "1 second")), enrichStream(options?.enrichers ?? []))
+        return poll.pipe(
+          Stream.repeat(Schedule.spaced(interval)),
+          enrichStream(enrichersOf(options)),
+          verifyStream(descriptor, options)
+        )
       }))
 
     // One emission pass supplies both the session fold and the event consumer.
@@ -209,13 +254,18 @@ export class Bridge extends Context.Service<Bridge, BridgeShape>()("@agentbridge
         yield* fs.makeDirectory(bundle).pipe(Effect.mapError(fail))
         const eventsPath = path.join(bundle, "events.jsonl")
         yield* fs.writeFileString(eventsPath, "").pipe(Effect.mapError(fail))
-        const enrich = enrichment(options?.enrichers ?? [])
+        const enrich = enrichment(enrichersOf(options))
+        const verify = verifier(descriptor, options)
         let eventCount = 0
-        const loaded = yield* consumeSession(adapter, descriptor, (raw) => {
-          const batch = raw.flatMap(enrich)
-          eventCount += batch.length
-          return batch.length === 0 ? Effect.void : fs.writeFileString(eventsPath, batch.map((event) => `${encodeEventLine(event)}\n`).join(""), { flag: "a" }).pipe(Effect.mapError(fail))
-        })
+        const loaded = yield* consumeSession(adapter, descriptor, (raw) =>
+          Effect.gen(function*() {
+            const enriched = raw.flatMap(enrich)
+            const batch = verify === undefined ? enriched : yield* Effect.forEach(enriched, verify)
+            eventCount += batch.length
+            if (batch.length > 0) {
+              yield* fs.writeFileString(eventsPath, batch.map((event) => `${encodeEventLine(event)}\n`).join(""), { flag: "a" }).pipe(Effect.mapError(fail))
+            }
+          }))
 
         const manifest: BridgeSessionManifest = {
           format: "bridge-session",
@@ -225,7 +275,7 @@ export class Bridge extends Context.Service<Bridge, BridgeShape>()("@agentbridge
           eventCount,
           warningCount: loaded.warnings.length
         }
-        yield* fs.writeFileString(path.join(bundle, "session.json"), `${encodeSessionJson(loaded.session)}\n`)
+        yield* fs.writeFileString(path.join(bundle, "session.json"), `${encodeSessionJson(options?.redact === true ? redactSession(loaded.session) : loaded.session)}\n`)
           .pipe(Effect.mapError(fail))
         yield* fs.writeFileString(path.join(bundle, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`)
           .pipe(Effect.mapError(fail))

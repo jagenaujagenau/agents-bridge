@@ -24,6 +24,8 @@ export const OpenCodeAssistantMessage = Schema.Struct({
   role: Schema.tag("assistant"),
   time: Schema.optionalKey(Time),
   modelID: Schema.optionalKey(Schema.String),
+  /** Why the model call ended: `tool-calls` continues the turn; anything else ends it. */
+  finish: Schema.optionalKey(Schema.NullOr(Schema.String)),
   path: Schema.optionalKey(Schema.Struct({ cwd: Schema.optionalKey(Schema.String) })),
   error: Schema.optionalKey(
     Schema.NullOr(Schema.Struct({

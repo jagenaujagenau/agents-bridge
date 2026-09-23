@@ -105,10 +105,11 @@ export class AcpRecordingAdapter extends Context.Service<AcpRecordingAdapter, Ha
         const first = Option.getOrUndefined(Option.flatMap(Option.fromNullishOr(head[0]), parseJson))
         return { startedAt: stringProp(first, "receivedAt") }
       },
-      read: (descriptor) => {
+      follows: true,
+      read: (descriptor, readOptions) => {
         const [agent, ...rest] = descriptor.nativeId.split("/")
         const options = { agent: agent!, sessionId: rest.join("/"), source: descriptor.sourcePath }
-        return readLines(fs, harness, descriptor.sourcePath).pipe(
+        return readLines(fs, harness, descriptor.sourcePath, { follow: readOptions?.follow }).pipe(
           Stream.filter(({ line }) => line.trim().length > 0),
           Stream.map(({ line }) => Option.getOrElse(parseJson(line), (): unknown => MALFORMED_JSON)),
           acpEmissions(options)

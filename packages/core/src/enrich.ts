@@ -1,4 +1,4 @@
-import { type EventId, type SessionEvent, stableEventId } from "@agentbridge/schema"
+import { type EventId, type Session, type SessionEvent, stableEventId } from "@agentbridge/schema"
 import { Stream } from "effect"
 
 /**
@@ -38,10 +38,28 @@ export const enrichStream = (enrichers: ReadonlyArray<SessionEnricher>) =>
 const GIT_COMMIT = /\bgit\s+(?:-[Cc]\s+\S+\s+)*commit\b/
 const COMMIT_LINE = /^\[([^\s\]]+)(?: \([^)]*\))? ([0-9a-f]{7,40})\] (.*)$/m
 
-/** `-m "msg"`, `-am 'msg'`, `-m msg`, `--message=msg`. */
-const messageArgument = (command: string): string | undefined => {
-  const match = /(?:\s-[a-zA-Z]*m|\s--message)(?:\s+|=)(?:"((?:[^"\\]|\\.)*)"|'([^']*)'|(\S+))/.exec(command)
+/**
+ * The commit message a command passes: a heredoc (`-F - <<'EOF'`, `-m "$(cat <<'EOF' …)"`),
+ * or `-m "msg"`, `-am 'msg'`, `-m msg`, `--message=msg`.
+ */
+export const commitMessage = (command: string): string | undefined => {
+  const commit = command.slice(command.search(GIT_COMMIT))
+  const heredoc = /<<-?\s*(['"]?)(\w+)\1\n([\s\S]*?)\n\s*\2\b/.exec(commit)
+  if (heredoc && /(?:-F\s*-|\$\(cat\s+<<)/.test(commit)) return heredoc[3]
+  const match = /(?:\s-[a-zA-Z]*m|\s--message)(?:\s+|=)(?:"((?:[^"\\]|\\.)*)"|'([^']*)'|(\S+))/.exec(commit)
   return match ? (match[1] ?? match[2] ?? match[3])?.replace(/\\"/g, "\"") : undefined
+}
+
+/** git's subject: the first line of the message. */
+export const commitSubject = (message: string): string => message.trim().split("\n")[0]!.trim()
+
+/** `<hash> <subject>` lines, as printed by `git log --oneline`, for a known subject. */
+const onelineHash = (stdout: string, subject: string): string | undefined => {
+  for (const line of stdout.split("\n")) {
+    const match = /^([0-9a-f]{7,40}) (.*)$/.exec(line.trim())
+    if (match && match[2] === subject) return match[1]
+  }
+  return undefined
 }
 
 /**
@@ -64,7 +82,8 @@ export const gitEnricher: SessionEnricher = () => {
       return [event]
     }
     const line = COMMIT_LINE.exec(event.stdout ?? "")
-    const message = line?.[3] ?? messageArgument(started.command)
+    const message = commitMessage(started.command) ?? line?.[3]
+    const hash = line?.[2] ?? (message === undefined ? undefined : onelineHash(event.stdout ?? "", commitSubject(message)))
     const commit: SessionEvent = {
       type: "git.commit",
       id: stableEventId({
@@ -81,7 +100,8 @@ export const gitEnricher: SessionEnricher = () => {
       derivedFrom: [started.id, event.id],
       certainty: "inferred",
       source: event.source,
-      ...(line ? { branch: line[1]!, commit: line[2]! } : {}),
+      ...(line ? { branch: line[1]! } : {}),
+      ...(hash !== undefined ? { commit: hash } : {}),
       ...(message !== undefined ? { message } : {})
     }
     return [event, commit]
@@ -144,6 +164,17 @@ const redactValue = (value: unknown): unknown => {
   }
   return value
 }
+
+/**
+ * Redacts the session fields that carry user text: the title (usually the first prompt),
+ * the agent label and free-form metadata. Identity, paths and timestamps are kept.
+ */
+export const redactSession = (session: Session): Session => ({
+  ...session,
+  ...(session.title !== undefined ? { title: redactText(session.title) } : {}),
+  ...(session.agentLabel !== undefined ? { agentLabel: redactText(session.agentLabel) } : {}),
+  metadata: redactValue(session.metadata) as Session["metadata"]
+})
 
 /** Redacts every content string of every event. Opt-in at read and export boundaries. */
 export const redactionEnricher: SessionEnricher = () => (event) => [

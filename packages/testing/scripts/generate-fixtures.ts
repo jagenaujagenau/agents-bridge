@@ -154,8 +154,8 @@ generators["opencode"] = () => {
   }
   const user = (session: string, s: number, parts: ReadonlyArray<object>) =>
     message(session, s, { role: "user", time: { created: ms(s) }, agent: "build", model: { providerID: "openai", modelID: "gpt-5.5" } }, parts)
-  const assistant = (session: string, s: number, parts: ReadonlyArray<object | string>) =>
-    message(session, s, { role: "assistant", time: { created: ms(s), completed: ms(s) }, modelID: "gpt-5.5", providerID: "openai", path: { cwd, root: cwd }, finish: "tool-calls" }, [
+  const assistant = (session: string, s: number, parts: ReadonlyArray<object | string>, finish = "tool-calls") =>
+    message(session, s, { role: "assistant", time: { created: ms(s), completed: ms(s) }, modelID: "gpt-5.5", providerID: "openai", path: { cwd, root: cwd }, finish }, [
       { type: "step-start" },
       ...parts,
       { type: "step-finish", reason: "tool-calls", cost: 0, tokens: { input: 1, output: 1 } }
@@ -190,11 +190,11 @@ generators["opencode"] = () => {
   assistant(parentId, 11, [
     tool(11, "call_test2", "bash", { command: "npm test", description: "Run tests again" }, "2 passing", { output: "2 passing", exit: 0, description: "Run tests again" })
   ])
-  assistant(parentId, 13, [{ type: "text", text: reply, time: { start: ms(13), end: ms(13) } }])
+  assistant(parentId, 13, [{ type: "text", text: reply, time: { start: ms(13), end: ms(13) } }], "stop")
 
   user(childId, 20, [{ type: "text", text: "Find all TODO comments in src/." }])
   assistant(childId, 21, [tool(21, "call_grep", "grep", { pattern: "TODO", path: "src" }, "No files found", { matches: 0 })])
-  assistant(childId, 23, [{ type: "text", text: "There are no TODO comments in src/." }])
+  assistant(childId, 23, [{ type: "text", text: "There are no TODO comments in src/." }], "stop")
   db.close()
 }
 

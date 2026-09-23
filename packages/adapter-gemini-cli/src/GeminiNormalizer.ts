@@ -1,9 +1,11 @@
 import {
   type Emission,
   emitPlan,
+  endTurn,
   makeRecordDecoder,
   planList,
   RecordScope,
+  startTurn,
   stringProp,
   textOf,
   titleFrom,
@@ -95,6 +97,8 @@ export interface GeminiState {
   readonly path: string
   readonly started: boolean
   readonly sawPrompt: boolean
+  /** The open turn, if any. */
+  readonly turn: string | undefined
   readonly projectPath: string | undefined
 }
 
@@ -103,6 +107,7 @@ export const initialState = (sessionId: SessionId, path: string, projectPath: st
   path,
   started: false,
   sawPrompt: false,
+  turn: undefined,
   projectPath
 })
 
@@ -133,6 +138,7 @@ export const normalizeMessage = (initial: GeminiState, [raw, index]: readonly [u
       const text = textOf(parts).replace(REFERENCED_FILES, "").trim()
       if (text.length === 0) return [state, s.emissions]
       const content: Array<ContentBlock> = [{ type: "text", text }]
+      state = { ...state, turn: startTurn(s, state.turn, message.id ?? String(index)) }
       s.event({ type: "user.message", certainty: "known", content })
       if (!state.sawPrompt) {
         s.metadata({ title: { value: titleFrom(text), priority: 10 } })
@@ -185,6 +191,8 @@ export const normalizeMessage = (initial: GeminiState, [raw, index]: readonly [u
       const text = textOf(partsOf(message.content)).trim()
       if (text.length > 0) s.event({ type: "agent.message", certainty: "known", content: [{ type: "text", text }] })
       for (const call of message.toolCalls ?? []) normalizeToolCall(s, call, state.projectPath)
+      // Gemini records no turn end; a reply that calls no tools is where the model stopped.
+      if ((message.toolCalls ?? []).length === 0) state = { ...state, turn: endTurn(s, state.turn, "completed", { certainty: "inferred" }) }
       return [state, s.emissions]
     }
   }

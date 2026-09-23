@@ -1,14 +1,16 @@
 import {
   type DecodedRecord,
   type Emission,
+  endTurn,
   makeLineDecoder,
   RecordScope,
+  startTurn,
   stringProp,
   textOf,
   titleFrom,
-  warnUndecodable,
   tokenCount,
-  usageFields
+  usageFields,
+  warnUndecodable
 } from "@agentbridge/core"
 import {
   type CommandId,
@@ -83,6 +85,8 @@ export interface PiState {
   readonly path: string
   readonly headerSeen: boolean
   readonly sawPrompt: boolean
+  /** The open turn, if any. */
+  readonly turn: string | undefined
   readonly cwd: string | undefined
   readonly tools: ReadonlyMap<string, OpenTool>
 }
@@ -92,6 +96,7 @@ export const initialState = (sessionId: SessionId, path: string): PiState => ({
   path,
   headerSeen: false,
   sawPrompt: false,
+  turn: undefined,
   cwd: undefined,
   tools: new Map()
 })
@@ -203,6 +208,7 @@ const normalizeMessage = (initial: PiState, message: PiMessage, s: RecordScope):
           return block?.type === "text" ? [{ type: "text" as const, text: block.text }] : []
         })
       if (content.length === 0) return [state, s.emissions]
+      state = { ...state, turn: startTurn(s, state.turn, s.options.nativeEventId ?? String(s.options.recordIndex)) }
       s.event({ type: "user.message", certainty: "known", content })
       if (!state.sawPrompt) {
         s.metadata({ title: { value: titleFrom(textOf(content)), priority: 10 } })
@@ -254,6 +260,15 @@ const normalizeMessage = (initial: PiState, message: PiMessage, s: RecordScope):
           content: [{ type: "text", text: message.errorMessage ?? message.stopReason }]
         })
       }
+      // `toolUse` continues the turn; every other stop reason ends it.
+      const outcome = message.stopReason === "stop" || message.stopReason === "length"
+        ? "completed"
+        : message.stopReason === "aborted"
+        ? "interrupted"
+        : message.stopReason === "error"
+        ? "failed"
+        : undefined
+      if (outcome !== undefined) state = { ...state, turn: endTurn(s, state.turn, outcome) }
       return [state, s.emissions]
     }
     case "toolResult":
