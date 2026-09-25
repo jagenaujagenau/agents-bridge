@@ -1,6 +1,6 @@
 # Decisions and Spec Adjustments
 
-Where the implementation departs from `BRIDGE_EFFECT_V4_SPEC.md` (draft v0.2), and why. Most changes
+Where the implementation departs from `docs/spec.md` (draft v0.2), and why. Most changes
 were forced by real Claude Code and Codex history (see `docs/research/reference-findings.md`) rather
 than added speculatively.
 

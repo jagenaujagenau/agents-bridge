@@ -176,7 +176,7 @@ Tool-kind mapping (agent-harness, extended for history):
 
 ---
 
-## 5. Changes these findings force in `BRIDGE_EFFECT_V4_SPEC.md`
+## 5. Changes these findings force in `docs/spec.md`
 
 Without these, a consumer has to branch on the provider to render or count things correctly.
 
