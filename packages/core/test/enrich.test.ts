@@ -39,6 +39,16 @@ describe("redaction", () => {
     expect(redactText("token ghp_" + "a".repeat(36))).toBe("token [REDACTED:github-token]")
     expect(redactText("Authorization: Bearer " + "x".repeat(30))).toBe("Authorization: Bearer [REDACTED:bearer-token]")
     expect(redactText("export OPENAI_API_KEY=abcdefgh12345")).toBe("export OPENAI_API_KEY=[REDACTED:env-secret]")
+    // Inline assignments later in a command line, not only at its start.
+    expect(redactText("REPLAY_JEV=1 TYPESAFE_API_KEY=abcdefgh12345 node run.ts")).toBe(
+      "REPLAY_JEV=1 TYPESAFE_API_KEY=[REDACTED:env-secret] node run.ts"
+    )
+    expect(redactText("cd app && GITHUB_TOKEN=abcdefgh12345 gh pr list")).toBe(
+      "cd app && GITHUB_TOKEN=[REDACTED:env-secret] gh pr list"
+    )
+    expect(redactText("use this key: apikey_" + "a1".repeat(18) + "_" + "b2".repeat(32))).toBe(
+      "use this key: [REDACTED:typesafe-key]"
+    )
     expect(redactText("AKIAABCDEFGHIJKLMNOP")).toBe("[REDACTED:aws-access-key]")
     expect(redactText("-----BEGIN RSA PRIVATE KEY-----\nabc\n-----END RSA PRIVATE KEY-----")).toBe("[REDACTED:private-key]")
     expect(redactText("nothing secret here, PATH=/usr/bin")).toBe("nothing secret here, PATH=/usr/bin")

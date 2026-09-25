@@ -120,11 +120,13 @@ const DETECTORS: ReadonlyArray<readonly [kind: string, pattern: RegExp, keep?: n
   ["openai-key", /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{32,}/g],
   ["slack-token", /\bxox[abprs]-[A-Za-z0-9-]{10,}/g],
   ["google-api-key", /\bAIza[0-9A-Za-z_-]{35}\b/g],
+  ["typesafe-key", /\bapikey_[0-9a-f]{20,}_[0-9a-f]{40,}\b/g],
   ["bearer-token", /(\bBearer\s+)[A-Za-z0-9._~+/-]{20,}=*/gi, 1],
-  // KEY=value lines, as in .env files and exported shell variables. The name is kept.
+  // KEY=value assignments: .env lines, exported variables, and inline ones in commands
+  // (`A=1 OPENAI_API_KEY=… cmd`, `cd x && TOKEN=… cmd`). The name is kept.
   [
     "env-secret",
-    /^(\s*(?:export\s+)?[A-Z][A-Z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIALS?)[A-Z0-9_]*\s*=\s*)(["']?)[^\s"'#]{8,}\2/gm,
+    /(?<=^|[\s;&|(])((?:export\s+)?[A-Z][A-Z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIALS?)[A-Z0-9_]*\s*=\s*)(["']?)[^\s"'#]{8,}\2/gm,
     1
   ]
 ]
