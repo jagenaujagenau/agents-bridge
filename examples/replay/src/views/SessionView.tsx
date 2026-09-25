@@ -8,6 +8,8 @@ import { Timeline } from "../components/Timeline.tsx"
 import { type ChapterId, indexOfId, type ReplaySession, type SceneId } from "../replay/model.ts"
 import { cursorOf, initialState, makeReducer, type Speed } from "../playback/reducer.ts"
 import { useShortcuts } from "../playback/shortcuts.ts"
+import { Tour, tourSeen } from "../components/Tour.tsx"
+import { SESSION_TOUR_KEY, sessionTour } from "./sessionTour.tsx"
 import { reviewKey, useReview } from "../review/ReviewStore.ts"
 import { ChangesView } from "./ChangesView.tsx"
 import { EventsView } from "./EventsView.tsx"
@@ -100,6 +102,17 @@ const Loaded = (
   const reducer = useMemo(() => makeReducer(replay), [replay])
   const [state, dispatch] = useReducer(reducer, route.view, initialState)
   const { review, toggle } = useReview(replay.session.id)
+  // First visit to any session opens the tour; the Tour button replays it on the Story view.
+  const [touring, setTouring] = useState(() => !tourSeen.get(SESSION_TOUR_KEY))
+  const closeTour = useCallback(() => {
+    tourSeen.set(SESSION_TOUR_KEY)
+    setTouring(false)
+  }, [])
+  const startTour = () => {
+    dispatch({ type: "view", view: "story" })
+    // After the Story view has rendered, so every step finds its target.
+    setTimeout(() => setTouring(true), 0)
+  }
   const cursor = cursorOf(replay, state.index)
   const written = useRef<string | undefined>(undefined)
 
@@ -177,6 +190,7 @@ const Loaded = (
             </button>
           ))}
         </nav>
+        <button className="views__fleet" onClick={startTour} title="What each part of this page shows">Tour</button>
         <a className="views__fleet" href={formatRoute({ page: "fleet", session: replay.session.id })} title="This session, its subagents and their steps over time">
           Fleet
         </a>
@@ -206,6 +220,7 @@ const Loaded = (
         )}
       </main>
 
+      {touring && <Tour steps={sessionTour} onClose={closeTour} />}
       <footer className="playback">
         <div className="playback__controls">
           <IconButton label="Previous chapter (K)" onClick={() => dispatch({ type: "chapter", by: -1 })}>⏮</IconButton>

@@ -5,6 +5,7 @@ import { describe, expect, it } from "@effect/vitest"
 import { Effect } from "effect"
 import { formatRoute, parseRoute } from "../src/app/routes.ts"
 import { reviewKey } from "../src/review/ReviewStore.ts"
+import { placeCard } from "../src/components/Tour.tsx"
 import { displayPath } from "../src/views/SessionPicker.tsx"
 import { initialState, makeReducer } from "../src/playback/reducer.ts"
 import { loadReplaySession } from "../src/index.ts"
@@ -62,6 +63,22 @@ describe("project paths", () => {
     expect(displayPath("/Users/me", "/Users/me")).toBe("~")
     expect(displayPath("/Users/meadow/app", "/Users/me")).toBe("/Users/meadow/app")
     expect(displayPath("/work/demo", undefined)).toBe("/work/demo")
+  })
+})
+
+describe("tour card placement", () => {
+  const card = { width: 300, height: 160 }
+  const viewport = { width: 1200, height: 800 }
+  it("sits below its target when there is room, centered on it and inside the screen", () => {
+    expect(placeCard({ top: 40, left: 500, width: 200, height: 100 }, card, viewport)).toEqual({ top: 152, left: 450, side: "below" })
+    expect(placeCard({ top: 40, left: 0, width: 100, height: 100 }, card, viewport).left).toBe(12)
+  })
+  it("tries right, then above, then left, then the middle", () => {
+    expect(placeCard({ top: 300, left: 100, width: 200, height: 450 }, card, viewport).side).toBe("right")
+    expect(placeCard({ top: 600, left: 800, width: 380, height: 150 }, card, viewport).side).toBe("above")
+    expect(placeCard({ top: 0, left: 600, width: 580, height: 790 }, card, viewport).side).toBe("left")
+    expect(placeCard({ top: 0, left: 0, width: 1200, height: 800 }, card, viewport).side).toBe("center")
+    expect(placeCard(undefined, card, viewport)).toEqual({ top: 320, left: 450, side: "center" })
   })
 })
 

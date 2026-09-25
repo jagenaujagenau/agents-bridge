@@ -23,6 +23,11 @@ Pick a session, then read the overview, press <kbd>Space</kbd> to play, or jump 
 are deep: `#/session/<id>/scene/sc4`, `/story/ch2`, `/event/<eventId>`, `/file?path=…`, `/changes`,
 `/events`.
 
+The first time you open a session, a short tour spotlights each part of the page (briefing,
+chapters, code map, evidence, timeline, the other views and the fleet) and explains what its marks
+mean. It skips parts the layout hides, so a phone gets fewer steps. **Tour** in the top bar replays
+it; whether it has been seen is remembered in this browser (`src/views/sessionTour.tsx`).
+
 | Keys | |
 |---|---|
 | <kbd>Space</kbd> | play / pause |

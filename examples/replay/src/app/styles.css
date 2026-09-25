@@ -216,7 +216,8 @@ h2 .plain { font: inherit; }
 .stats dd { margin: 2px 0 0; font: 400 22px var(--serif); }
 .stats small { font: 12px var(--sans); }
 .warnings { margin-top: 20px; }
-.briefing { display: grid; gap: 18px; margin: 24px 0 0; }
+.briefing { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; margin: 24px 0 0; }
+.briefing__row > .clip { flex: 1; }
 .briefing ul { list-style: none; margin: 6px 0 0; padding: 0; }
 .briefing__row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 6px; border-radius: 6px; font-size: 13px; }
 .briefing__row:hover { background: var(--panel); }
@@ -428,7 +429,9 @@ h2 .plain { font: inherit; }
 }
 
 @media (max-width: 700px) {
-  .topbar { gap: 10px; padding: 0 12px; }
+  .topbar { gap: 4px; padding: 0 10px; }
+  .wordmark { margin-right: auto; font-size: 18px; }
+  .views button, .views__fleet { padding: 6px 7px; font-size: 13px; }
   .topbar__title, .topbar .progress { display: none; }
   .story__narrative { padding: 24px 16px; }
   .overview h1 { font-size: 30px; }
@@ -534,3 +537,28 @@ h2 .plain { font: inherit; }
   .fleet__bar-bottom { position: sticky; bottom: 0; grid-template-columns: auto minmax(0, 1fr); }
   .fleet__bar-bottom .segmented { display: none; }
 }
+
+/* -------------------------------------------------------------------- tour */
+
+/* The layer covers the page so it cannot be clicked mid-tour; the spotlight's shadow dims the rest. */
+.tour { position: fixed; inset: 0; z-index: 50; }
+.tour__scrim { position: fixed; inset: 0; background: rgba(8, 9, 10, 0.72); }
+.tour__spot {
+  position: fixed; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(8, 9, 10, 0.72);
+  outline: 2px solid var(--accent); outline-offset: 0;
+  transition: top 220ms var(--ease), left 220ms var(--ease), width 220ms var(--ease), height 220ms var(--ease);
+}
+.tour__card {
+  position: fixed; width: 340px; max-width: calc(100vw - 24px);
+  background: var(--raised); border: 1px solid var(--line); border-radius: 12px;
+  padding: 16px 18px 14px; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  transition: top 220ms var(--ease), left 220ms var(--ease);
+}
+.tour__card h3 { font: 400 20px/1.25 var(--serif); margin: 6px 0 8px; }
+.tour__body p { margin: 0; font-size: 13.5px; line-height: 1.55; color: #cfcac0; }
+.tour__body b { color: var(--text); font-weight: 500; }
+.tour__body kbd { margin-left: 0; color: var(--text); border-color: var(--faint); }
+.tour__actions { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
+.tour__actions span { display: flex; gap: 6px; align-items: center; }
+.tour__next { margin-top: 0; padding: 7px 14px; }

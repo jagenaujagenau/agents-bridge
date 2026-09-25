@@ -225,7 +225,7 @@ const buildSummary = (
     const labelCount = new Map<string, number>()
     for (const c of stats.checks) labelCount.set(c.kind, (labelCount.get(c.kind) ?? 0) + 1)
     const name = (c: CheckResult) =>
-      `${validationLabel[c.kind]}${labelCount.get(c.kind)! > 1 ? ` (\`${shortCommand(c.command, 40)}\`)` : ""}` +
+      `${validationLabel[c.kind]}${labelCount.get(c.kind)! > 1 ? ` (${shortCommand(c.command, 40)})` : ""}` +
       (c.inferred !== undefined ? " (inferred)" : "")
     const byOutcome = (o: ValidationOutcome) => stats.checks.filter((c) => c.outcome === o).map(name)
     const [failing, passing, unclear] = [byOutcome("failed"), byOutcome("passed"), byOutcome("unknown")]
