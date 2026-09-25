@@ -3,14 +3,34 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:fixtures": "REPLAY_FIXTURES=1 vite",
+    "eval:jev": "node --env-file-if-exists=.env.local scripts/eval-jev.ts",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
-    "effect": "4.0.0-rc.115",
     "@agentbridge/core": "workspace:*",
-    "@agentbridge/schema": "workspace:*"
+    "@agentbridge/schema": "workspace:*",
+    "d3-force": "^3.0.0",
+    "d3-hierarchy": "^3.1.2",
+    "effect": "4.0.0-rc.115",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "simple-icons": "^16.32.0"
   },
   "devDependencies": {
     "@agentbridge/platform-node": "workspace:*",
-    "@agentbridge/testing": "workspace:*"
+    "@agentbridge/testing": "workspace:*",
+    "@types/d3-force": "^3.0.10",
+    "@types/d3-hierarchy": "^3.1.7",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.3.0"
   }
 }

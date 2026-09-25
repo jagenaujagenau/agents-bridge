@@ -69,8 +69,8 @@ const program = Effect.gen(function*() {
 program.pipe(Effect.provide(NodeBridge.layer()), Effect.runPromise)
 ```
 
-`examples/replay` is a small Replay consumer that renders sessions from every harness with no
-provider branches. An architectural test enforces that.
+`examples/replay` is Replay: a web app (`pnpm replay`) that reconstructs any session as chapters, scenes,
+a stable code map and linked evidence, plus a fleet view of every session over time, with no provider branches. An architectural test enforces that.
 
 Live ACP traffic uses the same event type:
 

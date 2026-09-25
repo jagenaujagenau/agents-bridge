@@ -4,3 +4,5 @@ dist
 tmp/
 .bridge/
 tmp/
+.gstack/
+.env*.local

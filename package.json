@@ -4,13 +4,14 @@
   "type": "module",
   "packageManager": "pnpm@11.18.0",
   "scripts": {
-    "typecheck": "tsc -p .",
+    "typecheck": "tsc -p . && tsc -p examples/replay",
     "test": "vitest run",
-    "check": "tsc -p . && vitest run",
+    "check": "tsc -p . && tsc -p examples/replay && vitest run",
     "schemas": "node packages/schema/scripts/generate-json-schemas.ts",
     "bridge": "node packages/cli/src/bin.ts",
     "audit:local": "node packages/platform-node/scripts/audit-local-history.ts",
-    "update-golden": "UPDATE_GOLDEN=1 vitest run"
+    "update-golden": "UPDATE_GOLDEN=1 vitest run",
+    "replay": "pnpm --filter @agentbridge/example-replay dev"
   },
   "dependencies": {
     "@effect/platform-node": "4.0.0-rc.115",

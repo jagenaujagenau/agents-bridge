@@ -2,7 +2,7 @@ import { NodeBridge } from "@agentbridge/platform-node"
 import { fixtureBridgeOptions, relativeTo, scenario } from "@agentbridge/testing"
 import { describe, expect, it } from "@effect/vitest"
 import { Effect } from "effect"
-import { readdirSync, readFileSync } from "node:fs"
+import { readdirSync, readFileSync, statSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { type Replay, replaySession } from "../src/index.ts"
 
@@ -44,8 +44,12 @@ describe("one Replay consumer, two harnesses (spec §94)", () => {
 
 describe("architectural test (spec §91)", () => {
   const root = fileURLToPath(new URL("../../../", import.meta.url))
+  const walk = (dir: string): Array<string> =>
+    readdirSync(`${root}${dir}`).flatMap((f) => statSync(`${root}${dir}/${f}`).isDirectory() ? walk(`${dir}/${f}`) : [`${dir}/${f}`])
   const consumerSources = [
-    ...readdirSync(`${root}examples/replay/src`).map((f) => `examples/replay/src/${f}`),
+    // Exempt: the model-vendor table names vendors such as the one behind Anthropic's models.
+    // It keys on canonical `usage.recorded.model` text, never on which harness ran a session.
+    ...walk("examples/replay/src").filter((f) => /\.tsx?$/.test(f) && f !== "examples/replay/src/models/vendors.ts"),
     ...readdirSync(`${root}packages/cli/src`).map((f) => `packages/cli/src/${f}`),
     "packages/testing/src/projection.ts"
   ]

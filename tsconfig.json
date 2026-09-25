@@ -16,5 +16,5 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true
   },
-  "include": ["packages/*/src", "packages/*/test", "packages/*/scripts", "examples/*/src", "vitest.config.ts"]
+  "include": ["packages/*/src", "packages/*/test", "packages/*/scripts", "vitest.config.ts"]
 }
