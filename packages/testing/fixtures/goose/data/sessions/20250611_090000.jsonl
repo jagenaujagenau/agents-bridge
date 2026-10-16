@@ -1,0 +1,7 @@
+{"working_dir":"/work/legacy","description":"Check the build","schedule_id":null,"message_count":6,"total_tokens":2400,"input_tokens":2000,"output_tokens":400}
+{"id":"msg_l1","role":"user","created":1749632400,"content":[{"type":"text","text":"Run the build and show me the README."}]}
+{"id":"msg_l2","role":"assistant","created":1749632402,"content":[{"type":"text","text":"Let me look at the README."},{"type":"toolRequest","id":"call_view","toolCall":{"status":"success","value":{"name":"developer__text_editor","arguments":{"command":"view","path":"/work/legacy/README.md"}}}}]}
+{"id":"msg_l3","role":"user","created":1749632403,"content":[{"type":"toolResponse","id":"call_view","toolResult":{"status":"success","value":[{"type":"text","text":"```\n1: # Legacy\n```","annotations":{"audience":["assistant"]}},{"type":"text","text":"# Legacy","annotations":{"audience":["user"],"priority":0}}]}}]}
+{"id":"msg_l4","role":"assistant","created":1749632404,"content":[{"type":"toolRequest","id":"call_build","toolCall":{"status":"success","value":{"name":"developer__shell","arguments":{"command":"npm run build"}}}}]}
+{"id":"msg_l5","role":"user","created":1749632410,"content":[{"type":"toolResponse","id":"call_build","toolResult":{"status":"success","value":[{"type":"text","text":"build ok","annotations":{"audience":["assistant"]}},{"type":"text","text":"build ok","annotations":{"audience":["user"],"priority":0}}]}}]}
+{"id":"msg_l6","role":"assistant","created":1749632411,"content":[{"type":"text","text":"The build succeeded."}]}

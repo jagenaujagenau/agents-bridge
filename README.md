@@ -12,7 +12,7 @@ One typed model for coding-agent sessions, whichever harness recorded them.
 
 ## What is this?
 
-Bridge reads coding-agent history from eight sources and turns every session into the same canonical
+Bridge reads coding-agent history from seventeen sources and turns every session into the same canonical
 `Session` plus an ordered `SessionEvent` stream. Applications built on it never need to know which
 harness produced a session. The wire format is plain JSON / JSONL with published JSON Schemas, so
 consuming it doesn't require Effect.
@@ -22,9 +22,18 @@ Claude Code  JSONL ────┐
 Codex        rollouts ─┤
 OpenCode     SQLite ───┤
 pi           JSONL ────┤
-Gemini CLI   JSON ─────┼─> one Session + SessionEvent stream
+oh-my-pi     JSONL ────┤
+Gemini CLI   JSON ─────┤
+Qwen Code    JSONL ────┼─> one Session + SessionEvent stream
 Cursor       JSONL ────┤
 Antigravity  JSONL ────┤
+Amp          JSON ─────┤
+Droid        JSONL ────┤
+Copilot CLI  JSONL ────┤
+Grok Build   JSONL ────┤
+Kimi Code    JSONL ────┤
+Crush        SQLite ───┤
+Goose        SQLite ───┤
 ACP          live / recorded JSON-RPC ─┘
 ```
 
@@ -63,8 +72,11 @@ pnpm audit:local           # normalize every local session; report counts, warni
 </details>
 
 Each harness's history location can be overridden: `CLAUDE_CONFIG_DIR`, `CODEX_HOME`,
-`OPENCODE_DATA_DIR`, `PI_CODING_AGENT_DIR`, `GEMINI_CLI_HOME`, `CURSOR_CONFIG_DIR`,
-`ANTIGRAVITY_HOME`, `BRIDGE_ACP_RECORDINGS`.
+`OPENCODE_DATA_DIR`, `PI_CODING_AGENT_DIR`, `OMP_CODING_AGENT_DIR`, `GEMINI_CLI_HOME`, `QWEN_HOME`,
+`CURSOR_CONFIG_DIR`, `ANTIGRAVITY_HOME`, `AMP_DATA_HOME`, `FACTORY_HOME_OVERRIDE`, `COPILOT_HOME`,
+`GROK_HOME`, `KIMI_CODE_HOME`, `CRUSH_GLOBAL_DATA`, `GOOSE_PATH_ROOT`, `BRIDGE_ACP_RECORDINGS`,
+`BRIDGE_AMP_EXPORTS`, `BRIDGE_CRUSH_PROJECTS`. The full list is in
+[docs/adapter-authoring.md](docs/adapter-authoring.md).
 
 ### Replay
 
@@ -123,7 +135,7 @@ To talk to a running daemon instead, provide `DaemonBridge.layer({ socket })` fr
 graph TD
     Schema["@agentbridge/schema"]
     Core["@agentbridge/core"]
-    Adapters["8 adapters<br/>claude-code · codex · opencode · pi<br/>gemini-cli · cursor · antigravity · acp"]
+    Adapters["17 adapters<br/>claude-code · codex · opencode · pi · omp<br/>gemini-cli · qwen-code · cursor · antigravity<br/>amp · droid · copilot · grok · kimi<br/>crush · goose · acp"]
     Stores["store-memory · store-sqlite"]
     Node["@agentbridge/platform-node"]
     Daemon["@agentbridge/daemon"]
@@ -155,6 +167,15 @@ in `platform-node`. Details in [docs/architecture.md](docs/architecture.md).
 | `@agentbridge/adapter-cursor` | `~/.cursor/projects/*/agent-transcripts/**.jsonl` |
 | `@agentbridge/adapter-antigravity` | `~/.gemini/antigravity[-cli]/brain/*/.system_generated/logs/transcript*.jsonl` |
 | `@agentbridge/adapter-acp` | ACP v1 streams (`acpEvents`) and recordings |
+| `@agentbridge/adapter-omp` | `~/.omp/agent/sessions/**.jsonl` (oh-my-pi; reuses the pi normalizer) |
+| `@agentbridge/adapter-amp` | `~/.local/share/amp/threads/T-*.json` (written only up to 2026-03-31) and `amp threads export` files in `~/.bridge/amp` |
+| `@agentbridge/adapter-droid` | `~/.factory/sessions/**.jsonl` (Factory Droid) |
+| `@agentbridge/adapter-copilot` | `~/.copilot/session-state/*/events.jsonl` (GitHub Copilot CLI) |
+| `@agentbridge/adapter-qwen-code` | `~/.qwen/projects/*/chats/*.jsonl` |
+| `@agentbridge/adapter-grok` | `~/.grok/sessions/*/*/updates.jsonl` (xAI Grok Build) |
+| `@agentbridge/adapter-kimi` | `~/.kimi-code/sessions/**/wire.jsonl` (Kimi Code) |
+| `@agentbridge/adapter-crush` | `<project>/.crush/crush.db` per project, found through Crush's `projects.json` (read-only SQLite) |
+| `@agentbridge/adapter-goose` | `~/.local/share/goose/sessions/sessions.db` (read-only SQLite) and legacy JSONL |
 | `@agentbridge/store-memory` | In-memory `SessionStore` |
 | `@agentbridge/store-sqlite` | Persistent `SessionStore` on `node:sqlite`, incremental by source fingerprint |
 | `@agentbridge/platform-node` | `NodeBridge.layer()`, version probing, `node:sqlite` reader, local history audit |
@@ -176,7 +197,7 @@ agents-bridge/
 ├── examples/
 │   └── replay/                   # session replay web app
 ├── packages/
-│   ├── adapter-*/                # one per harness (8)
+│   ├── adapter-*/                # one per harness (17)
 │   ├── cli/
 │   ├── core/
 │   ├── daemon/
@@ -210,21 +231,23 @@ agents-bridge/
 
 v0.1 scope (spec §94) is met, and v0.2 extends it to every harness in the reference set:
 
-- `bridge harnesses` detects all eight sources, and `bridge sessions` lists them through one registry.
+- `bridge harnesses` detects every source, and `bridge sessions` lists them through one registry.
 - `bridge events --jsonl` emits valid canonical events.
 - The same §63 scenario, recorded natively for each harness, produces the same semantic event
   sequence (adjusted only by declared capabilities).
 - `pnpm audit:local` on the development machine normalizes 607 real sessions from five harnesses
   with zero invariant violations.
 
-Gemini CLI and Antigravity are verified only against fixtures built from their documented formats,
-because no local history was available. See [docs/decisions.md](docs/decisions.md).
+Gemini CLI, Antigravity and the nine adapters added in v0.6 are verified only
+against fixtures built from their source code or documented formats, because no local history was
+available. See [docs/decisions.md](docs/decisions.md).
 
 | Version | Adds |
 |---|---|
 | v0.3 | Turns, token usage, user shell commands, plans from todo tools, `bridge watch` for every harness, the SQLite index, git and redaction enrichers |
 | v0.4 | Tailing growing sessions from the last byte offset, turns for every harness, verified derived commits, redacted session metadata |
 | v0.5 | The background daemon: one process serves many clients over an owner-only Unix socket, with one shared tail per watched session |
+| v0.6 | oh-my-pi, Amp, Factory Droid, GitHub Copilot CLI, Qwen Code, Grok Build, Kimi Code, Crush and Goose adapters; pi 1.0 records (system prompts, `!cmd`, usage entries, flat session dirs); current Codex and Claude Code record types |
 
 ## Contributing
 

@@ -14,6 +14,8 @@
  ┌──────┴──────────────────────────────────────────────────────────────┐
  adapter-claude-code  adapter-codex  adapter-opencode  adapter-pi         store-memory  store-sqlite
  adapter-gemini-cli   adapter-cursor adapter-antigravity adapter-acp
+ adapter-omp          adapter-amp    adapter-droid       adapter-copilot    adapter-qwen-code
+ adapter-grok         adapter-kimi   adapter-crush       adapter-goose
  └──────┬──────────────────────────────────────────────────────────────┘
         ↑
 @agentbridge/platform-node          NodeBridge.layer(), NodeVersionProbe, NodeSqliteReader (node:sqlite)
@@ -62,7 +64,7 @@ Normalizer state lives in the `mapAccum` accumulator (open tool calls, staged
 |---|---|
 | `Bridge` | `Bridge.layer` (needs `HarnessRegistry`, `SessionStore`, `FileSystem`, `Path`) |
 | `HarnessRegistry` | `HarnessRegistry.layer([Effect.service(ClaudeCodeAdapter), …])` |
-| each adapter (`ClaudeCodeAdapter`, `CodexAdapter`, `OpenCodeAdapter`, `PiAdapter`, `GeminiCliAdapter`, `CursorAdapter`, `AntigravityAdapter`, `AcpRecordingAdapter`) | `*.layer` (needs `HostEnvironment`, `VersionProbe`, `FileSystem`, `Path`; OpenCode also `SqliteReader`) |
+| each adapter (`ClaudeCodeAdapter`, `CodexAdapter`, `OpenCodeAdapter`, `PiAdapter`, `GeminiCliAdapter`, `CursorAdapter`, `AntigravityAdapter`, `AcpRecordingAdapter`, `OmpAdapter`, `AmpAdapter`, `DroidAdapter`, `CopilotAdapter`, `QwenCodeAdapter`, `GrokAdapter`, `KimiAdapter`, `CrushAdapter`, `GooseAdapter`) | `*.layer` (needs `HostEnvironment`, `VersionProbe`, `FileSystem`, `Path`; OpenCode, Crush and Goose also `SqliteReader`) |
 | `HostEnvironment` | `layerConfig` (process environment via `Config`), `layerWithOverrides({...})`, or `layer({...})` for tests |
 | `VersionProbe` | `NodeVersionProbe` (spawns `--version` with a timeout) or `VersionProbe.layerNoop` |
 | `GitRepository` | `NodeGitRepository` (`git` binary, argument arrays, fsmonitor off); optional |
@@ -73,10 +75,10 @@ Normalizer state lives in the `mapAccum` accumulator (open tool calls, staged
 
 Three adapter shapes share the pipeline:
 
-- **File per session** (Claude Code, Codex, pi, Gemini CLI, Cursor, Antigravity, ACP recordings):
+- **File per session** (Claude Code, Codex, pi, oh-my-pi, Gemini CLI, Cursor, Antigravity, ACP recordings, Amp, Factory Droid, Copilot CLI, Qwen Code, Grok Build, Kimi Code):
   walk roots → classify path → stat + head → descriptor; read streams lines through a provider decoder.
   All but Claude Code and Codex use `makeFileHistoryAdapter`.
-- **Database** (OpenCode): one indexed query lists sessions; reading streams joined message/part rows,
+- **Database** (OpenCode, Crush, Goose): one indexed query lists sessions; reading streams joined message/part rows,
   grouped per message with `Stream.groupAdjacentBy`.
 - **Protocol stream** (ACP): `acpEvents` is a `Stream` transformer over whatever an ACP client
   observes, live or recorded. Bridge does not own the connection.

@@ -1,0 +1,5 @@
+default_model = "kimi-k2.6"
+
+[providers.kimi]
+type = "kimi"
+api_key = "sk-FAKE-kimi-access-token-0000000000000000"

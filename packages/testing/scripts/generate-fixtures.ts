@@ -14,6 +14,15 @@ import { dirname, join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
+import { generate as generateAmp } from "../../adapter-amp/test/generate-fixture.ts"
+import { generate as generateCrush } from "../../adapter-crush/test/generate-fixture.ts"
+import { generate as generateGoose } from "../../adapter-goose/test/generate-fixture.ts"
+import { generate as generateGrok } from "../../adapter-grok/test/generate-fixture.ts"
+import { generate as generateKimi } from "../../adapter-kimi/test/generate-fixture.ts"
+import { generateCopilotFixture } from "../../adapter-copilot/test/generate-fixture.ts"
+import { generateDroidFixture } from "../../adapter-droid/test/generate-fixture.ts"
+import { generate as generateOmp } from "../../adapter-omp/test/generate-fixture.ts"
+import { generate as generateQwenCode } from "../../adapter-qwen-code/test/generate-fixture.ts"
 
 const root = fileURLToPath(new URL("../fixtures/", import.meta.url))
 const cwd = "/work/demo"
@@ -55,26 +64,31 @@ generators["pi"] = () => {
       type: "message",
       message: { role: "toolResult", toolCallId, toolName, content: [{ type: "text", text }], isError, details, timestamp: ms(s) }
     })
+  let readResult = { id: "" }
   write(
     join(dir, `${stamp}_${id}.jsonl`),
     jsonl([
       { type: "session", version: 3, id, timestamp: t(0), cwd },
       entry(0, { type: "model_change", provider: "openai", modelId: "gpt-5.5" }),
       entry(0, { type: "thinking_level_change", thinkingLevel: "medium" }),
+      // pi 1.0 records the system prompt it sent; harness configuration, not conversation.
+      entry(0, { type: "message", message: { role: "system", content: "You are pi, a coding agent.", sections: { preamble: "You are pi, a coding agent." }, timestamp: ms(0) } }),
       entry(1, { type: "message", message: { role: "user", content: [{ type: "text", text: prompt }], timestamp: ms(1) } }),
       assistant(2, [
         { type: "thinking", thinking: "I should read the README first.", thinkingSignature: "sig" },
         { type: "toolCall", id: "call_read", name: "read", arguments: { path: "README.md" } }
       ]),
-      result(4, "call_read", "read", "# Demo\nA demo project."),
+      (readResult = result(4, "call_read", "read", "# Demo\nA demo project.")),
       assistant(5, [{
         type: "toolCall",
         id: "call_edit",
         name: "edit",
         arguments: { path: "README.md", edits: [{ oldText: "A demo project.", newText: "A demo project.\n\n## Usage\n\nRun `npm start`." }] }
       }]),
+      // pi 1.0 adds `patch`, a real unified diff; `diff` stays the numbered display diff.
       result(6, "call_edit", "edit", "Successfully replaced 1 block(s) in README.md.", false, {
         diff: "  1 # Demo\n  2 A demo project.\n+ 3 \n+ 4 ## Usage\n+ 5 \n+ 6 Run `npm start`.",
+        patch: "--- README.md\n+++ README.md\n@@ -1,2 +1,6 @@\n # Demo\n A demo project.\n+\n+## Usage\n+\n+Run `npm start`.\n",
         firstChangedLine: 3
       }),
       "{\"type\":\"message\",\"id\":\"broken", // malformed
@@ -87,7 +101,10 @@ generators["pi"] = () => {
       assistant(11, [{ type: "toolCall", id: "call_test2", name: "bash", arguments: { command: "npm test" } }]),
       result(12, "call_test2", "bash", "2 passing"),
       assistant(13, [{ type: "text", text: reply }], "stop"),
-      entry(14, { type: "session_info", name: "Add README usage section" })
+      entry(14, { type: "session_info", name: "Add README usage section" }),
+      // pi 1.0: a model-context-only edit (state, not an event) and a cache warm-up call (usage).
+      entry(15, { type: "context_edit", targetId: readResult.id, replacement: null }),
+      entry(16, { type: "usage", kind: "cache_warm", provider: "openai", model: "gpt-5.5", usage: { input: 0, output: 1, cacheRead: 46, cacheWrite: 0, totalTokens: 47 } })
     ])
   )
   // A session navigated with /tree: the first answer was abandoned and the conversation continued from the prompt.
@@ -114,6 +131,28 @@ generators["pi"] = () => {
       assistant(21, [{ type: "toolCall", id: "call_grep", name: "grep", arguments: { pattern: "TODO", path: "src" } }]),
       result(22, "call_grep", "grep", "No matches found"),
       assistant(23, [{ type: "text", text: "There are no TODO comments in src/." }], "stop")
+    ])
+  )
+  // PI_CODING_AGENT_SESSION_DIR: a flat custom directory, here holding a session with a custom ID
+  // that contains `_`, user `!` commands, a legacy hook message, PowerShell and a deferred response.
+  n = 0
+  parent = null
+  const customId = "demo_custom-id.1"
+  const userCommand = (s: number, command: string, output: string, exitCode: number | undefined, cancelled = false) =>
+    entry(s, { type: "message", message: { role: "bashExecution", command, output, exitCode, cancelled, truncated: false, timestamp: ms(s) } })
+  write(
+    join(root, "pi", "custom-sessions", `2026-09-01T10-00-39-000Z_${customId}.jsonl`),
+    jsonl([
+      { type: "session", version: 3, id: customId, timestamp: t(39), cwd },
+      userCommand(40, "git status --short", " M README.md", 0),
+      userCommand(41, "npm run lint", "1 problem", 1),
+      userCommand(42, "npm run watch", "", undefined, true),
+      entry(43, { type: "message", message: { role: "hookMessage", customType: "reminder", content: "Remember to run the linter.", display: true, timestamp: ms(43) } }),
+      entry(44, { type: "message", message: { role: "user", content: [{ type: "text", text: "List the files on Windows." }], timestamp: ms(44) } }),
+      assistant(45, [{ type: "toolCall", id: "call_ps", name: "powershell", arguments: { command: "Get-ChildItem" } }]),
+      result(46, "call_ps", "powershell", "README.md"),
+      entry(47, { type: "message", message: { role: "assistant", content: [], model: "gpt-5.5", provider: "openai", stopReason: "deferred", usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 }, timestamp: ms(47) } }),
+      assistant(48, [{ type: "text", text: "The directory holds README.md." }], "stop")
     ])
   )
 }
@@ -373,6 +412,17 @@ generators["acp"] = () => {
     ])
   )
 }
+
+// Harnesses whose generator lives next to its adapter's tests.
+generators["omp"] = generateOmp
+generators["amp"] = generateAmp
+generators["droid"] = () => generateDroidFixture(root)
+generators["copilot"] = generateCopilotFixture
+generators["qwen-code"] = generateQwenCode
+generators["grok"] = generateGrok
+generators["kimi"] = generateKimi
+generators["crush"] = () => generateCrush(root)
+generators["goose"] = () => generateGoose(root)
 
 const selected = process.argv.slice(2)
 for (const [name, generate] of Object.entries(generators)) {

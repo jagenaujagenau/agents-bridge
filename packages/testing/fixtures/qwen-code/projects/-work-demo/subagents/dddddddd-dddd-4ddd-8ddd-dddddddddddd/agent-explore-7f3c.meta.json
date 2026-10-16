@@ -1,0 +1,10 @@
+{
+  "agentId": "explore-7f3c",
+  "agentType": "Explore",
+  "description": "Find TODO comments",
+  "parentSessionId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  "toolUseId": "call_agent",
+  "parentAgentId": null,
+  "createdAt": "2026-09-01T10:00:20.000Z",
+  "status": "completed"
+}

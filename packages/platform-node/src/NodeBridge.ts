@@ -1,11 +1,20 @@
 import { AcpRecordingAdapter } from "@agentbridge/adapter-acp"
+import { AmpAdapter } from "@agentbridge/adapter-amp"
 import { AntigravityAdapter } from "@agentbridge/adapter-antigravity"
 import { ClaudeCodeAdapter } from "@agentbridge/adapter-claude-code"
 import { CodexAdapter } from "@agentbridge/adapter-codex"
+import { CopilotAdapter } from "@agentbridge/adapter-copilot"
 import { CursorAdapter } from "@agentbridge/adapter-cursor"
+import { DroidAdapter } from "@agentbridge/adapter-droid"
 import { GeminiCliAdapter } from "@agentbridge/adapter-gemini-cli"
+import { OmpAdapter } from "@agentbridge/adapter-omp"
 import { OpenCodeAdapter } from "@agentbridge/adapter-opencode"
 import { PiAdapter } from "@agentbridge/adapter-pi"
+import { QwenCodeAdapter } from "@agentbridge/adapter-qwen-code"
+import { GrokAdapter } from "@agentbridge/adapter-grok"
+import { KimiAdapter } from "@agentbridge/adapter-kimi"
+import { CrushAdapter } from "@agentbridge/adapter-crush"
+import { GooseAdapter } from "@agentbridge/adapter-goose"
 import {
   Bridge,
   type HarnessAdapterShape,
@@ -48,6 +57,15 @@ type AdapterServices =
   | CursorAdapter
   | AntigravityAdapter
   | AcpRecordingAdapter
+  | OmpAdapter
+  | AmpAdapter
+  | DroidAdapter
+  | CopilotAdapter
+  | QwenCodeAdapter
+  | GrokAdapter
+  | KimiAdapter
+  | CrushAdapter
+  | GooseAdapter
 
 const adapterServices: Record<string, Effect.Effect<HarnessAdapterShape, never, AdapterServices>> = {
   "claude-code": Effect.service(ClaudeCodeAdapter),
@@ -57,10 +75,37 @@ const adapterServices: Record<string, Effect.Effect<HarnessAdapterShape, never, 
   "gemini-cli": Effect.service(GeminiCliAdapter),
   cursor: Effect.service(CursorAdapter),
   antigravity: Effect.service(AntigravityAdapter),
-  acp: Effect.service(AcpRecordingAdapter)
+  acp: Effect.service(AcpRecordingAdapter),
+  omp: Effect.service(OmpAdapter),
+  amp: Effect.service(AmpAdapter),
+  droid: Effect.service(DroidAdapter),
+  copilot: Effect.service(CopilotAdapter),
+  "qwen-code": Effect.service(QwenCodeAdapter),
+  grok: Effect.service(GrokAdapter),
+  kimi: Effect.service(KimiAdapter),
+  crush: Effect.service(CrushAdapter),
+  goose: Effect.service(GooseAdapter)
 }
 
-export const HarnessAdapterIds = ["claude-code", "codex", "opencode", "pi", "gemini-cli", "cursor", "antigravity", "acp"] as const
+export const HarnessAdapterIds = [
+  "claude-code",
+  "codex",
+  "opencode",
+  "pi",
+  "gemini-cli",
+  "cursor",
+  "antigravity",
+  "acp",
+  "omp",
+  "amp",
+  "droid",
+  "copilot",
+  "qwen-code",
+  "grok",
+  "kimi",
+  "crush",
+  "goose"
+] as const
 export type HarnessAdapterId = (typeof HarnessAdapterIds)[number]
 
 export interface NodeBridgeOptions {
@@ -94,7 +139,16 @@ export const layer = (options: NodeBridgeOptions = {}) => {
     GeminiCliAdapter.layer,
     CursorAdapter.layer,
     AntigravityAdapter.layer,
-    AcpRecordingAdapter.layer
+    AcpRecordingAdapter.layer,
+    OmpAdapter.layer,
+    AmpAdapter.layer,
+    DroidAdapter.layer,
+    CopilotAdapter.layer,
+    QwenCodeAdapter.layer,
+    GrokAdapter.layer,
+    KimiAdapter.layer,
+    CrushAdapter.layer,
+    GooseAdapter.layer
   )
     .pipe(Layer.provide(Layer.mergeAll(probe, host, NodeSqliteReader)))
   return Bridge.layer.pipe(

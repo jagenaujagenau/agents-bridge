@@ -20,7 +20,16 @@
     "@agentbridge/adapter-cursor": "workspace:*",
     "@agentbridge/adapter-antigravity": "workspace:*",
     "@agentbridge/adapter-acp": "workspace:*",
-    "@agentbridge/store-sqlite": "workspace:*"
+    "@agentbridge/store-sqlite": "workspace:*",
+    "@agentbridge/adapter-omp": "workspace:*",
+    "@agentbridge/adapter-amp": "workspace:*",
+    "@agentbridge/adapter-droid": "workspace:*",
+    "@agentbridge/adapter-copilot": "workspace:*",
+    "@agentbridge/adapter-qwen-code": "workspace:*",
+    "@agentbridge/adapter-grok": "workspace:*",
+    "@agentbridge/adapter-kimi": "workspace:*",
+    "@agentbridge/adapter-crush": "workspace:*",
+    "@agentbridge/adapter-goose": "workspace:*"
   },
   "devDependencies": {
     "@agentbridge/testing": "workspace:*"

@@ -1,0 +1,7 @@
+{
+  "providers": {
+    "anthropic": {
+      "api_key": "sk-ant-FAKE0000000000000000000000000000"
+    }
+  }
+}

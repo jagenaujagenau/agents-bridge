@@ -44,11 +44,20 @@ Harness IDs and their override variables:
 | Claude Code | `claude-code` | `~/.claude/projects/**.jsonl` | `CLAUDE_CONFIG_DIR` |
 | Codex | `codex` | `~/.codex/sessions/**/rollout-*.jsonl` | `CODEX_HOME` |
 | OpenCode | `opencode` | `~/.local/share/opencode/opencode.db` (SQLite) | `OPENCODE_DATA_DIR`, `XDG_DATA_HOME` |
-| pi | `pi` | `~/.pi/agent/sessions/<cwd>/<time>_<id>.jsonl` | `PI_CODING_AGENT_DIR` |
+| pi | `pi` | `~/.pi/agent/sessions/<cwd>/<time>_<id>.jsonl` | `PI_CODING_AGENT_DIR`, `PI_CODING_AGENT_SESSION_DIR` (flat) |
 | Gemini CLI | `gemini-cli` | `~/.gemini/tmp/<project>/chats/session-*.json` | `GEMINI_CLI_HOME` |
 | Cursor | `cursor` | `~/.cursor/projects/<path>/agent-transcripts/**.jsonl` | `CURSOR_CONFIG_DIR` |
 | Antigravity | `antigravity` | `~/.gemini/antigravity[-cli]/brain/<id>/.system_generated/logs/transcript[_full].jsonl` | `ANTIGRAVITY_HOME` |
 | ACP recordings | `acp` | `~/.bridge/acp/<agent>/<session>.jsonl` | `BRIDGE_ACP_RECORDINGS` |
+| oh-my-pi | `omp` | `~/.omp/agent/sessions/<dir>/<time>_<id>.jsonl` (subagents: `<time>_<id>/<AgentId>.jsonl`) | `OMP_CODING_AGENT_DIR`, `OMP_CODING_AGENT_SESSION_DIR`, `OMP_PROFILE` / `PI_PROFILE`, `PI_CONFIG_DIR`, `XDG_DATA_HOME` |
+| Amp | `amp` | `~/.local/share/amp/threads/T-<uuid>.json` (written only up to 2026-03-31; newer threads are server-side) + `~/.bridge/amp/*.json` (`amp threads export`) | `AMP_DATA_HOME`, `XDG_DATA_HOME`, `BRIDGE_AMP_EXPORTS` |
+| Factory Droid | `droid` | `~/.factory/sessions/<project>/<id>.jsonl` | `FACTORY_HOME_OVERRIDE` (replaces `HOME`) |
+| GitHub Copilot CLI | `copilot` | `~/.copilot/session-state/<id>/events.jsonl` (+ `workspace.yaml`) | `COPILOT_HOME` |
+| Qwen Code | `qwen-code` | `~/.qwen/projects/<cwd>/chats/<id>.jsonl` (+ `archive/`, `subagents/<id>/agent-*.jsonl`) | `QWEN_RUNTIME_DIR`, `QWEN_HOME` |
+| Grok Build | `grok` | `~/.grok/sessions/<encoded-cwd>/<id>/updates.jsonl` (+ `summary.json`) | `GROK_HOME` |
+| Kimi Code | `kimi` | `~/.kimi-code/sessions/<wd_slug_hash>/<session_id>/agents/<agent>/wire.jsonl` (+ `state.json`) | `KIMI_CODE_HOME` |
+| Crush | `crush` | `<project>/.crush/crush.db` (SQLite, one per project; found via `<global data>/projects.json`) | `CRUSH_GLOBAL_DATA`, `XDG_DATA_HOME`, `LOCALAPPDATA`, `BRIDGE_CRUSH_PROJECTS` (extra projects or databases) |
+| Goose | `goose` | `~/.local/share/goose/sessions/sessions.db` (SQLite) + legacy `sessions/<id>.jsonl` | `GOOSE_PATH_ROOT` (`<root>/data`), `XDG_DATA_HOME` |
 
 ## Rules
 
@@ -103,24 +112,24 @@ Harness IDs and their override variables:
 Reflects what is implemented and tested, not what a harness could support. "Real data" means the
 adapter was audited against real local history as well as fixtures.
 
-| | Claude Code | Codex | OpenCode | pi | Gemini CLI | Cursor | Antigravity | ACP |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| Storage | JSONL | JSONL | SQLite | JSONL | JSON | JSONL | JSONL | JSON-RPC stream / JSONL recording |
-| Verified on real data | ✓ | ✓ | ✓ | ✓ | fixtures only | ✓ | fixtures only | fixtures + live stream test |
-| Detect | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | recordings dir |
-| Subagents as linked sessions | ✓ | ✓ | ✓ | ✓ | – | ✓ | – | – |
-| Relationships | resume | fork | – | fork | – | – | – | – |
-| Messages / notices | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (chunks coalesced) |
-| Reasoning | exposed | summaries | exposed | exposed | summaries | – | – | exposed |
-| Tool calls + kinds | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (no call IDs) | ✓ (no call IDs) | ✓ (native kinds) |
-| Tool results | ✓ | ✓ | ✓ | ✓ | ✓ | **not recorded** | paired by order (inferred) | ✓ |
-| Command exit codes | on failure | ✓ | ✓ | from trailer | ✓ | – | from output | from `rawOutput` |
-| File read | known | inferred | known | known | known | inferred | inferred | known |
-| File create vs change | ✓ | ✓ | ✓ | change only | ✓ | inferred | change only, inferred | ✓ |
-| Plans | TodoWrite | update_plan | todowrite | – | write_todos | TodoWrite (merge, inferred) | – | ✓ |
-| Turns | ✓ | ✓ | ✓ | ✓ | end inferred | ✓ (end inferred from tool-free replies; measured) | end inferred | ✓ |
-| Token usage | ✓ | ✓ | ✓ | ✓ | ✓ | – | – | – |
-| User shell commands | ✓ (`!cmd`, no exit code) | ✓ | – | – | – | – | – | – |
-| Timestamps | ✓ | ✓ | ✓ | ✓ | ✓ | user turns only | ✓ | receive time |
-| Live (also via daemon, shared tail) | `watch` (tail) | `watch` (tail) | `watch` (re-read) | `watch` (re-read) | `watch` (re-read) | `watch` (tail) | `watch` (tail) | `acpEvents`, `watch` (tail) |
-| Session end | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded |
+| | Claude Code | Codex | OpenCode | pi | Gemini CLI | Cursor | Antigravity | ACP | oh-my-pi | Amp | Factory Droid | Copilot CLI | Qwen Code | Grok Build | Kimi Code | Crush | Goose |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| Storage | JSONL | JSONL | SQLite | JSONL | JSON | JSONL | JSONL | JSON-RPC stream / JSONL recording | JSONL | JSON | JSONL | JSONL | JSONL | JSONL | JSONL | SQLite (per project) | SQLite (+ legacy JSONL) |
+| Verified on real data | ✓ | ✓ | ✓ | ✓ | fixtures only | ✓ | fixtures only | fixtures + live stream test | fixtures only | fixtures only | fixtures only | fixtures only | fixtures only | fixtures only | fixtures only | fixtures only | fixtures only |
+| Detect | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | recordings dir | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Subagents as linked sessions | ✓ | ✓ | ✓ | ✓ | – | ✓ | – | – | ✓ | – (Task call and result only) | ✓ | ✓ (inline in the parent log; resolvable, not listed) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Relationships | resume | fork | – | fork | – | – | – | – | fork | fork, resume (handoff), related (mention) | fork | fork, child | fork, child | fork | fork, child | – | – |
+| Messages / notices | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (chunks coalesced) | ✓ | ✓ | ✓ | ✓ (chunks coalesced) | ✓ | ✓ (chunks coalesced) | ✓ | ✓ | ✓ |
+| Reasoning | exposed | summaries | exposed | exposed | summaries | – | – | exposed | exposed | exposed | exposed | exposed | exposed | exposed | exposed | exposed | exposed |
+| Tool calls + kinds | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (no call IDs) | ✓ (no call IDs) | ✓ (native kinds) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (native ACP kinds) | ✓ | ✓ | ✓ |
+| Tool results | ✓ | ✓ | ✓ | ✓ | ✓ | **not recorded** | paired by order (inferred) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Command exit codes | on failure | ✓ | ✓ | from trailer | ✓ | – | from output | from `rawOutput` | from details + trailer | ✓ | from output | ✓ | ✓ | from output | on failure (+ background tasks) | on failure (output trailer) | structured output / trailer |
+| File read | known | inferred | known | known | known | inferred | inferred | known | known | known | known | known | known | known | known | known | known |
+| File create vs change | ✓ | ✓ | ✓ | change only | ✓ | inferred | change only, inferred | ✓ | ✓ (`write` change only) | create inferred, `apply_patch` ✓ | ✓ (Create inferred) | ✓ | ✓ | ✓ (ACP diffs) | ✓ (Write create inferred) | ✓ (`write` create inferred) | ✓ (legacy editor inferred) |
+| Plans | TodoWrite | update_plan | todowrite | – | write_todos | TodoWrite (merge, inferred) | – | ✓ | `todo` | todo_write | TodoWrite (`todo_state`) | update_todo | todo_write | ACP `plan` | TodoList | `todos` | – |
+| Turns | ✓ | ✓ | ✓ | ✓ | end inferred | ✓ (end inferred from tool-free replies; measured) | end inferred | ✓ | ✓ | ✓ | ✓ (end from `agent_turn_outcome`) | ✓ (prompt → tool-free reply) | end inferred | ✓ (`turn_completed`) | ✓ | ✓ (finish parts) | end inferred |
+| Token usage | ✓ | ✓ | ✓ | ✓ | ✓ | – | – | – | ✓ | ✓ | – | output only (totals in metadata) | ✓ | – (per-run totals in metadata) | ✓ | – (session totals in metadata) | ✓ |
+| User shell commands | ✓ (`!cmd`, no exit code) | ✓ | – | ✓ (`!cmd`, exit code) | – | – | – | – | ✓ (`!cmd`, Python, exit code) | ✓ (`$cmd`, exit code) | – | – | – | – | ✓ (`!cmd`, no exit code) | ✓ (`!cmd`, exit code) | – |
+| Timestamps | ✓ | ✓ | ✓ | ✓ | ✓ | user turns only | ✓ | receive time | ✓ | prompts and replies only | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (seconds) | ✓ (seconds) |
+| Live (also via daemon, shared tail) | `watch` (tail) | `watch` (tail) | `watch` (re-read) | `watch` (re-read) | `watch` (re-read) | `watch` (tail) | `watch` (tail) | `acpEvents`, `watch` (tail) | `watch` (re-read) | `watch` (re-read) | `watch` (re-read) | `watch` (tail) | `watch` (re-read) | `watch` (re-read) | `watch` (re-read) | `watch` (re-read) | `watch` (re-read) |
+| Session end | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded | not recorded |

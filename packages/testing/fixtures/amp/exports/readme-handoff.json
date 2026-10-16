@@ -1,0 +1,97 @@
+{
+  "v": 6,
+  "id": "T-eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+  "created": 1788256820000,
+  "messages": [
+    {
+      "role": "info",
+      "messageId": "M-0000000000000000000001",
+      "content": [
+        {
+          "type": "manual_bash_invocation",
+          "args": {
+            "cmd": "git",
+            "args": [
+              "status",
+              "--short"
+            ],
+            "cwd": "/work/demo"
+          },
+          "toolRun": {
+            "status": "done",
+            "result": {
+              "output": " M README.md\n?? docs/",
+              "exitCode": 0
+            }
+          }
+        }
+      ],
+      "createdAt": "2026-09-01T10:00:21.000Z"
+    },
+    {
+      "role": "user",
+      "messageId": "M-0000000000000000000002",
+      "content": [
+        {
+          "type": "text",
+          "text": "Summarize what changed in the README."
+        }
+      ],
+      "createdAt": "2026-09-01T10:00:22.000Z"
+    },
+    {
+      "role": "assistant",
+      "messageId": "M-0000000000000000000003",
+      "content": [
+        {
+          "type": "text",
+          "text": "README.md gained a Usage section; docs/usage.md is new."
+        }
+      ],
+      "state": {
+        "type": "complete",
+        "stopReason": "end_turn"
+      },
+      "usage": {
+        "model": "gpt-5.5",
+        "maxInputTokens": 272000,
+        "inputTokens": 0,
+        "outputTokens": 30,
+        "cacheCreationInputTokens": 50,
+        "cacheReadInputTokens": 200,
+        "totalInputTokens": 250,
+        "timestamp": "2026-09-01T10:00:24.000Z"
+      },
+      "createdAt": "2026-09-01T10:00:24.000Z"
+    }
+  ],
+  "title": "Summarize README change",
+  "env": {
+    "initial": {
+      "trees": [
+        {
+          "displayName": "demo",
+          "uri": "file:///work/demo"
+        }
+      ],
+      "platform": {
+        "os": "darwin",
+        "client": "CLI",
+        "clientVersion": "0.0.1774959077-ga71644",
+        "clientType": "cli"
+      },
+      "tags": [
+        "model:claude-opus-4-6"
+      ]
+    },
+    "updatedAt": "2026-09-01T10:00:20.000Z"
+  },
+  "relationships": [
+    {
+      "threadID": "T-dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "type": "handoff",
+      "role": "child",
+      "createdAt": 1788256820000
+    }
+  ]
+}

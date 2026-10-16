@@ -5,6 +5,7 @@ import {
   fixtureBridgeOptions,
   scenario,
   semanticProjection,
+  unlistedScenario,
   type SemanticStep
 } from "@agentbridge/testing"
 import { describe, expect, it } from "@effect/vitest"
@@ -25,8 +26,40 @@ const view = (id: string) =>
 
 const withoutCommands = (steps: ReadonlyArray<SemanticStep>) => steps.filter((step) => step[0] !== "command")
 
-const primaries = [scenario.claude, scenario.codex, scenario.pi, scenario.opencode, scenario.gemini, scenario.cursor, scenario.antigravity, scenario.acp]
-const subagents = [scenario.claudeSubagent, scenario.codexSubagent, scenario.piSubagent, scenario.opencodeSubagent, scenario.cursorSubagent]
+const primaries = [
+  scenario.claude,
+  scenario.codex,
+  scenario.pi,
+  scenario.opencode,
+  scenario.gemini,
+  scenario.cursor,
+  scenario.antigravity,
+  scenario.acp,
+  scenario.omp,
+  scenario.amp,
+  scenario.droid,
+  scenario.copilot,
+  scenario.qwen,
+  scenario.grok,
+  scenario.kimi,
+  scenario.crush,
+  scenario.goose
+]
+const subagents = [
+  scenario.claudeSubagent,
+  scenario.codexSubagent,
+  scenario.piSubagent,
+  scenario.opencodeSubagent,
+  scenario.cursorSubagent,
+  scenario.ompSubagent,
+  scenario.droidSubagent,
+  unlistedScenario.copilotSubagent,
+  scenario.qwenSubagent,
+  scenario.grokSubagent,
+  scenario.kimiSubagent,
+  scenario.crushSubagent,
+  scenario.gooseSubagent
+]
 
 describe("every harness yields the same primitives for the same work (spec §63)", () => {
   it.effect("the reference scenario, exactly", () =>
@@ -85,7 +118,7 @@ describe("every harness yields the same primitives for the same work (spec §63)
         commandsLinkedToTools: events.filter((e) => e.type === "command.completed").every((e) => e.parentEventId !== undefined)
       })
       const reference = summarize((yield* view(scenario.claude)).events)
-      for (const id of [scenario.pi, scenario.opencode, scenario.gemini, scenario.antigravity]) {
+      for (const id of [scenario.pi, scenario.opencode, scenario.gemini, scenario.antigravity, scenario.omp, scenario.amp, scenario.droid, scenario.copilot, scenario.qwen, scenario.grok, scenario.kimi, scenario.crush, scenario.goose]) {
         expect(summarize((yield* view(id)).events), id).toEqual(reference)
       }
     }).pipe(Effect.provide(fixtureLayer)))
@@ -104,7 +137,16 @@ describe("every harness yields the same primitives for the same work (spec §63)
         ["gemini-cli", true],
         ["cursor", true],
         ["antigravity", true],
-        ["acp", true]
+        ["acp", true],
+        ["omp", true],
+        ["amp", true],
+        ["droid", true],
+        ["copilot", true],
+        ["qwen-code", true],
+        ["grok", true],
+        ["kimi", true],
+        ["crush", true],
+        ["goose", true]
       ])
     }).pipe(Effect.provide(fixtureLayer)))
 })

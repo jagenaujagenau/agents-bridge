@@ -1,0 +1,6 @@
+{"type":"session_start","id":"eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee","title":"Find TODO comments","owner":"demo-user","callingSessionId":"dddddddd-dddd-4ddd-8ddd-dddddddddddd","callingToolUseId":"toolu_task","version":2,"cwd":"/work/demo"}
+{"type":"message","id":"m001-user","timestamp":"2026-09-01T10:00:20.000Z","message":{"role":"user","content":[{"type":"text","text":"Find all TODO comments in src/."}]}}
+{"type":"message","id":"m002-assistant","parentId":"m001-user","timestamp":"2026-09-01T10:00:21.000Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_grep","name":"Grep","input":{"pattern":"TODO","path":"/work/demo/src"}}]},"tokens":1221}
+{"type":"message","id":"m003-user","parentId":"m002-assistant","timestamp":"2026-09-01T10:00:22.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_grep","content":"No matches found"}]}}
+{"type":"message","id":"m004-assistant","parentId":"m003-user","timestamp":"2026-09-01T10:00:23.000Z","message":{"role":"assistant","content":[{"type":"text","text":"There are no TODO comments in src/."}]}}
+{"type":"agent_turn_outcome","turnId":"m001-user","reason":"completed","resultKind":"text"}

@@ -102,6 +102,28 @@ importers:
         specifier: 4.0.0-rc.115
         version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
 
+  packages/adapter-amp:
+    dependencies:
+      '@agentbridge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agentbridge/schema':
+        specifier: workspace:*
+        version: link:../schema
+      effect:
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115
+    devDependencies:
+      '@agentbridge/platform-node':
+        specifier: workspace:*
+        version: link:../platform-node
+      '@agentbridge/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@effect/platform-node':
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
+
   packages/adapter-antigravity:
     dependencies:
       '@agentbridge/core':
@@ -162,7 +184,73 @@ importers:
         specifier: 4.0.0-rc.115
         version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
 
+  packages/adapter-copilot:
+    dependencies:
+      '@agentbridge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agentbridge/schema':
+        specifier: workspace:*
+        version: link:../schema
+      effect:
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115
+    devDependencies:
+      '@agentbridge/platform-node':
+        specifier: workspace:*
+        version: link:../platform-node
+      '@agentbridge/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@effect/platform-node':
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
+
+  packages/adapter-crush:
+    dependencies:
+      '@agentbridge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agentbridge/schema':
+        specifier: workspace:*
+        version: link:../schema
+      effect:
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115
+    devDependencies:
+      '@agentbridge/platform-node':
+        specifier: workspace:*
+        version: link:../platform-node
+      '@agentbridge/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@effect/platform-node':
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
+
   packages/adapter-cursor:
+    dependencies:
+      '@agentbridge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agentbridge/schema':
+        specifier: workspace:*
+        version: link:../schema
+      effect:
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115
+    devDependencies:
+      '@agentbridge/platform-node':
+        specifier: workspace:*
+        version: link:../platform-node
+      '@agentbridge/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@effect/platform-node':
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
+
+  packages/adapter-droid:
     dependencies:
       '@agentbridge/core':
         specifier: workspace:*
@@ -206,6 +294,97 @@ importers:
         specifier: 4.0.0-rc.115
         version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
 
+  packages/adapter-goose:
+    dependencies:
+      '@agentbridge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agentbridge/schema':
+        specifier: workspace:*
+        version: link:../schema
+      effect:
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115
+    devDependencies:
+      '@agentbridge/platform-node':
+        specifier: workspace:*
+        version: link:../platform-node
+      '@agentbridge/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@effect/platform-node':
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
+
+  packages/adapter-grok:
+    dependencies:
+      '@agentbridge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agentbridge/schema':
+        specifier: workspace:*
+        version: link:../schema
+      effect:
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115
+    devDependencies:
+      '@agentbridge/platform-node':
+        specifier: workspace:*
+        version: link:../platform-node
+      '@agentbridge/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@effect/platform-node':
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
+
+  packages/adapter-kimi:
+    dependencies:
+      '@agentbridge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agentbridge/schema':
+        specifier: workspace:*
+        version: link:../schema
+      effect:
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115
+    devDependencies:
+      '@agentbridge/platform-node':
+        specifier: workspace:*
+        version: link:../platform-node
+      '@agentbridge/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@effect/platform-node':
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
+
+  packages/adapter-omp:
+    dependencies:
+      '@agentbridge/adapter-pi':
+        specifier: workspace:*
+        version: link:../adapter-pi
+      '@agentbridge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agentbridge/schema':
+        specifier: workspace:*
+        version: link:../schema
+      effect:
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115
+    devDependencies:
+      '@agentbridge/platform-node':
+        specifier: workspace:*
+        version: link:../platform-node
+      '@agentbridge/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@effect/platform-node':
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
+
   packages/adapter-opencode:
     dependencies:
       '@agentbridge/core':
@@ -229,6 +408,28 @@ importers:
         version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
 
   packages/adapter-pi:
+    dependencies:
+      '@agentbridge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@agentbridge/schema':
+        specifier: workspace:*
+        version: link:../schema
+      effect:
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115
+    devDependencies:
+      '@agentbridge/platform-node':
+        specifier: workspace:*
+        version: link:../platform-node
+      '@agentbridge/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@effect/platform-node':
+        specifier: 4.0.0-rc.115
+        version: 4.0.0-rc.115(effect@4.0.0-rc.115)(redis@6.2.1)
+
+  packages/adapter-qwen-code:
     dependencies:
       '@agentbridge/core':
         specifier: workspace:*
@@ -310,6 +511,9 @@ importers:
       '@agentbridge/adapter-acp':
         specifier: workspace:*
         version: link:../adapter-acp
+      '@agentbridge/adapter-amp':
+        specifier: workspace:*
+        version: link:../adapter-amp
       '@agentbridge/adapter-antigravity':
         specifier: workspace:*
         version: link:../adapter-antigravity
@@ -319,18 +523,42 @@ importers:
       '@agentbridge/adapter-codex':
         specifier: workspace:*
         version: link:../adapter-codex
+      '@agentbridge/adapter-copilot':
+        specifier: workspace:*
+        version: link:../adapter-copilot
+      '@agentbridge/adapter-crush':
+        specifier: workspace:*
+        version: link:../adapter-crush
       '@agentbridge/adapter-cursor':
         specifier: workspace:*
         version: link:../adapter-cursor
+      '@agentbridge/adapter-droid':
+        specifier: workspace:*
+        version: link:../adapter-droid
       '@agentbridge/adapter-gemini-cli':
         specifier: workspace:*
         version: link:../adapter-gemini-cli
+      '@agentbridge/adapter-goose':
+        specifier: workspace:*
+        version: link:../adapter-goose
+      '@agentbridge/adapter-grok':
+        specifier: workspace:*
+        version: link:../adapter-grok
+      '@agentbridge/adapter-kimi':
+        specifier: workspace:*
+        version: link:../adapter-kimi
+      '@agentbridge/adapter-omp':
+        specifier: workspace:*
+        version: link:../adapter-omp
       '@agentbridge/adapter-opencode':
         specifier: workspace:*
         version: link:../adapter-opencode
       '@agentbridge/adapter-pi':
         specifier: workspace:*
         version: link:../adapter-pi
+      '@agentbridge/adapter-qwen-code':
+        specifier: workspace:*
+        version: link:../adapter-qwen-code
       '@agentbridge/core':
         specifier: workspace:*
         version: link:../core

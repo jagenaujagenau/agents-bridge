@@ -1,0 +1,10 @@
+{
+  "model": "claude-opus-5",
+  "reasoningEffort": "medium",
+  "interactionMode": "auto",
+  "autonomyLevel": "low",
+  "tokenUsage": {
+    "inputTokens": 900,
+    "outputTokens": 120
+  }
+}

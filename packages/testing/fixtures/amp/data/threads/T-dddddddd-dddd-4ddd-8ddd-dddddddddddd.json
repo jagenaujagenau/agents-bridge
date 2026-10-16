@@ -1,0 +1,439 @@
+{
+  "v": 57,
+  "id": "T-dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  "created": 1788256800000,
+  "messages": [
+    {
+      "role": "user",
+      "messageId": 0,
+      "content": [
+        {
+          "type": "text",
+          "text": "Add a Usage section to README.md and make sure the tests pass."
+        },
+        {
+          "type": "text",
+          "text": "The user has the following files open: README.md",
+          "hidden": true
+        }
+      ],
+      "meta": {
+        "sentAt": 1788256801000
+      }
+    },
+    {
+      "role": "assistant",
+      "messageId": 1,
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "I should read the README first.",
+          "signature": "sig"
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_read",
+          "name": "Read",
+          "input": {
+            "path": "/work/demo/README.md"
+          },
+          "complete": true
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_todo",
+          "name": "todo_write",
+          "input": {
+            "todos": [
+              {
+                "id": "1",
+                "content": "Add a Usage section to README.md",
+                "status": "in-progress",
+                "priority": "high"
+              },
+              {
+                "id": "2",
+                "content": "Make the tests pass",
+                "status": "todo",
+                "priority": "medium"
+              }
+            ]
+          },
+          "complete": true
+        }
+      ],
+      "state": {
+        "type": "complete",
+        "stopReason": "tool_use"
+      },
+      "usage": {
+        "model": "claude-opus-4-6",
+        "maxInputTokens": 168000,
+        "inputTokens": 3,
+        "outputTokens": 40,
+        "cacheCreationInputTokens": 20,
+        "cacheReadInputTokens": 102,
+        "totalInputTokens": 125,
+        "timestamp": "2026-09-01T10:00:02.000Z"
+      }
+    },
+    {
+      "role": "user",
+      "messageId": 2,
+      "content": [
+        {
+          "type": "tool_result",
+          "toolUseID": "toolu_read",
+          "run": {
+            "status": "done",
+            "result": {
+              "absolutePath": "/work/demo/README.md",
+              "content": "1: # Demo\n2: A demo project."
+            }
+          }
+        },
+        {
+          "type": "tool_result",
+          "toolUseID": "toolu_todo",
+          "run": {
+            "status": "done",
+            "result": "Updated the TODO list."
+          }
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "messageId": 3,
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_edit",
+          "name": "edit_file",
+          "input": {
+            "path": "/work/demo/README.md",
+            "old_str": "A demo project.",
+            "new_str": "A demo project.\n\n## Usage\n\nRun `npm start`."
+          },
+          "complete": true
+        }
+      ],
+      "state": {
+        "type": "complete",
+        "stopReason": "tool_use"
+      },
+      "usage": {
+        "model": "claude-opus-4-6",
+        "maxInputTokens": 168000,
+        "inputTokens": 3,
+        "outputTokens": 40,
+        "cacheCreationInputTokens": 20,
+        "cacheReadInputTokens": 104,
+        "totalInputTokens": 127,
+        "timestamp": "2026-09-01T10:00:04.000Z"
+      }
+    },
+    {
+      "role": "user",
+      "messageId": 4,
+      "content": [
+        {
+          "type": "tool_result",
+          "toolUseID": "toolu_edit",
+          "run": {
+            "status": "done",
+            "result": {
+              "diff": "```diff\n@@ -1,2 +1,6 @@\n # Demo\n A demo project.\n+\n+## Usage\n+\n+Run `npm start`.\n```",
+              "lineRange": [
+                2,
+                6
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "messageId": 5,
+      "content": "not-a-list",
+      "state": {
+        "type": "complete",
+        "stopReason": "tool_use"
+      }
+    },
+    {
+      "role": "assistant",
+      "messageId": 6,
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_test1",
+          "name": "Bash",
+          "input": {
+            "cmd": "npm test",
+            "cwd": "/work/demo"
+          },
+          "complete": true
+        },
+        {
+          "type": "future_block_type",
+          "payload": "?"
+        }
+      ],
+      "state": {
+        "type": "complete",
+        "stopReason": "tool_use"
+      },
+      "usage": {
+        "model": "claude-opus-4-6",
+        "maxInputTokens": 168000,
+        "inputTokens": 3,
+        "outputTokens": 40,
+        "cacheCreationInputTokens": 20,
+        "cacheReadInputTokens": 106,
+        "totalInputTokens": 129,
+        "timestamp": "2026-09-01T10:00:06.000Z"
+      }
+    },
+    {
+      "role": "user",
+      "messageId": 7,
+      "content": [
+        {
+          "type": "tool_result",
+          "toolUseID": "toolu_test1",
+          "run": {
+            "status": "done",
+            "result": {
+              "output": "1 failing: usage section missing example",
+              "exitCode": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "messageId": 8,
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_write",
+          "name": "create_file",
+          "input": {
+            "path": "/work/demo/docs/usage.md",
+            "content": "# Usage\n"
+          },
+          "complete": true
+        }
+      ],
+      "state": {
+        "type": "complete",
+        "stopReason": "tool_use"
+      },
+      "usage": {
+        "model": "claude-opus-4-6",
+        "maxInputTokens": 168000,
+        "inputTokens": 3,
+        "outputTokens": 40,
+        "cacheCreationInputTokens": 20,
+        "cacheReadInputTokens": 108,
+        "totalInputTokens": 131,
+        "timestamp": "2026-09-01T10:00:08.000Z"
+      }
+    },
+    {
+      "role": "user",
+      "messageId": 9,
+      "content": [
+        {
+          "type": "tool_result",
+          "toolUseID": "toolu_write",
+          "run": {
+            "status": "done",
+            "result": "Successfully created file /work/demo/docs/usage.md"
+          }
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "messageId": 10,
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_task",
+          "name": "Task",
+          "input": {
+            "description": "Check docs links",
+            "prompt": "Check that every link in docs/usage.md resolves."
+          },
+          "complete": true
+        }
+      ],
+      "state": {
+        "type": "complete",
+        "stopReason": "tool_use"
+      },
+      "usage": {
+        "model": "claude-opus-4-6",
+        "maxInputTokens": 168000,
+        "inputTokens": 3,
+        "outputTokens": 40,
+        "cacheCreationInputTokens": 20,
+        "cacheReadInputTokens": 109,
+        "totalInputTokens": 132,
+        "timestamp": "2026-09-01T10:00:09.000Z"
+      }
+    },
+    {
+      "role": "user",
+      "messageId": 11,
+      "content": [
+        {
+          "type": "tool_result",
+          "toolUseID": "toolu_task",
+          "run": {
+            "status": "done",
+            "result": "All links in docs/usage.md resolve.",
+            "progress": [
+              {
+                "message": "Checking links in docs/usage.md",
+                "tool_uses": [
+                  {
+                    "id": "toolu_sub_read",
+                    "tool_name": "Read",
+                    "status": "done",
+                    "input": {
+                      "path": "/work/demo/docs/usage.md"
+                    },
+                    "result": {
+                      "absolutePath": "/work/demo/docs/usage.md",
+                      "content": "1: # Usage"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "messageId": 12,
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_test2",
+          "name": "Bash",
+          "input": {
+            "cmd": "npm test",
+            "cwd": "/work/demo"
+          },
+          "complete": true
+        }
+      ],
+      "state": {
+        "type": "complete",
+        "stopReason": "tool_use"
+      },
+      "usage": {
+        "model": "claude-opus-4-6",
+        "maxInputTokens": 168000,
+        "inputTokens": 3,
+        "outputTokens": 40,
+        "cacheCreationInputTokens": 20,
+        "cacheReadInputTokens": 111,
+        "totalInputTokens": 134,
+        "timestamp": "2026-09-01T10:00:11.000Z"
+      }
+    },
+    {
+      "role": "user",
+      "messageId": 13,
+      "content": [
+        {
+          "type": "tool_result",
+          "toolUseID": "toolu_test2",
+          "run": {
+            "status": "done",
+            "result": {
+              "output": "2 passing",
+              "exitCode": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "messageId": 14,
+      "content": [
+        {
+          "type": "text",
+          "text": "Added a Usage section to README.md and docs/usage.md. Tests pass."
+        }
+      ],
+      "state": {
+        "type": "complete",
+        "stopReason": "end_turn"
+      },
+      "usage": {
+        "model": "claude-opus-4-6",
+        "maxInputTokens": 168000,
+        "inputTokens": 3,
+        "outputTokens": 40,
+        "cacheCreationInputTokens": 20,
+        "cacheReadInputTokens": 113,
+        "totalInputTokens": 136,
+        "timestamp": "2026-09-01T10:00:13.000Z"
+      },
+      "turnElapsedMs": 12000
+    }
+  ],
+  "nextMessageId": 15,
+  "title": "Add README usage section",
+  "agentMode": "smart",
+  "env": {
+    "initial": {
+      "trees": [
+        {
+          "displayName": "demo",
+          "uri": "file:///work/demo"
+        }
+      ],
+      "platform": {
+        "os": "darwin",
+        "client": "CLI",
+        "clientVersion": "0.0.1774959077-ga71644",
+        "clientType": "cli"
+      },
+      "tags": [
+        "model:claude-opus-4-6"
+      ]
+    },
+    "updatedAt": "2026-09-01T10:00:00.000Z"
+  },
+  "relationships": [
+    {
+      "threadID": "T-eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "type": "handoff",
+      "role": "parent",
+      "createdAt": 1788256820000
+    }
+  ],
+  "~debug": {
+    "lastInferenceUsage": {
+      "model": "claude-opus-4-6",
+      "maxInputTokens": 168000,
+      "inputTokens": 3,
+      "outputTokens": 40,
+      "cacheCreationInputTokens": 20,
+      "cacheReadInputTokens": 113,
+      "totalInputTokens": 136,
+      "timestamp": "2026-09-01T10:00:13.000Z"
+    }
+  }
+}

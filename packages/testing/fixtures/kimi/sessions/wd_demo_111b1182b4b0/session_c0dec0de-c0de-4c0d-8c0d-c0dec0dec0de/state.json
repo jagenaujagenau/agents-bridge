@@ -1,0 +1,30 @@
+{
+  "id": "session_c0dec0de-c0de-4c0d-8c0d-c0dec0dec0de",
+  "version": 2,
+  "cwd": "/work/demo",
+  "createdAt": 1788256800000,
+  "updatedAt": 1788256818000,
+  "archived": false,
+  "title": "Add README usage section",
+  "titleKind": "generated",
+  "isCustomTitle": false,
+  "lastPrompt": "Add a Usage section to README.md and make sure the tests pass.",
+  "lastTurnReason": "completed",
+  "agents": {
+    "main": {
+      "homedir": "/home/demo/.kimi-code/sessions/wd_demo_111b1182b4b0/session_c0dec0de-c0de-4c0d-8c0d-c0dec0dec0de/agents/main",
+      "type": "main",
+      "parentAgentId": null
+    },
+    "agent-1": {
+      "homedir": "/home/demo/.kimi-code/sessions/wd_demo_111b1182b4b0/session_c0dec0de-c0de-4c0d-8c0d-c0dec0dec0de/agents/agent-1",
+      "type": "sub",
+      "parentAgentId": "main",
+      "labels": {
+        "parentAgentId": "main",
+        "profileName": "explore"
+      }
+    }
+  },
+  "custom": {}
+}

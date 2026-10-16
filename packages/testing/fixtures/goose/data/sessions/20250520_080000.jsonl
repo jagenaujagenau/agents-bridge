@@ -1,0 +1,3 @@
+{"working_dir":"/work/old","description":"Say hello","schedule_id":null,"message_count":2}
+{"id":"msg_a1","role":"user","created":1747728000,"content":[{"type":"text","text":"Say hello"}]}
+{"id":"msg_a2","role":"assistant","created":1747728005,"content":[{"type":"text","text":"Hello!"}]}
