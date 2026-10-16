@@ -224,8 +224,12 @@ export const EVENT_MSG_TYPES: ReadonlySet<string> = new Set([
   "token_count"
 ])
 
-/** Top-level rollout line types with no canonical meaning of their own. */
-export const IGNORED_LINE_TYPES: ReadonlySet<string> = new Set(["event_msg"])
+/**
+ * Top-level rollout line types with no canonical meaning of their own. `token_usage_record`
+ * repeats the per-call usage that `event_msg/token_count` already carries; `world_state` is an
+ * environment snapshot.
+ */
+export const IGNORED_LINE_TYPES: ReadonlySet<string> = new Set(["token_usage_record", "world_state"])
 
 /** JSON-encoded tool output: `{"output": "...", "metadata": {"exit_code": 0}}`. */
 export const StructuredOutput = Schema.Struct({

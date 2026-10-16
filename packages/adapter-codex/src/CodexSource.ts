@@ -4,6 +4,7 @@ import {
   Compacted,
   EVENT_MSG_TYPES,
   EventMsg,
+  IGNORED_LINE_TYPES,
   IGNORED_RESPONSE_ITEM_TYPES,
   RESPONSE_ITEM_TYPES,
   ResponseItem,
@@ -86,6 +87,6 @@ export const decodeLine = ({ index, line }: SourceLine): DecodedLine => {
       })
     }
     default:
-      return { _tag: "Unknown", nativeType: type, ...at }
+      return IGNORED_LINE_TYPES.has(type) ? { _tag: "Ignored", ...at } : { _tag: "Unknown", nativeType: type, ...at }
   }
 }

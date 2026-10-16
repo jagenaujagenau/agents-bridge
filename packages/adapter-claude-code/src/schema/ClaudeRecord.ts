@@ -120,7 +120,10 @@ export const METADATA_RECORD_TYPES: ReadonlySet<string> = new Set([
   "cost-state",
   "frame-link",
   "artifact-comment-monitor",
-  "artifact-autoreact-ledger"
+  "artifact-autoreact-ledger",
+  // In subagent files; the parent link already comes from the file's location.
+  "fork-context-ref",
+  "history-suppression"
 ])
 
 /** Structured `toolUseResult` payloads the normalizer relies on. */

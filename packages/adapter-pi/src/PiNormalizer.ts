@@ -14,6 +14,7 @@ import {
 } from "@agentbridge/core"
 import {
   type CommandId,
+  type CommandOutcome,
   type ContentBlock,
   type EventId,
   makeSessionId,
@@ -29,6 +30,54 @@ export const NAME = "pi"
 export const FORMAT = "pi-session-jsonl"
 
 // ---------------------------------------------------------------------------
+// Dialects: what differs between pi and formats derived from it
+// ---------------------------------------------------------------------------
+
+/** A tool call waiting for its result. */
+export interface OpenTool {
+  readonly startedId: EventId
+  readonly name: string
+  readonly input: unknown
+  readonly commandStartedId?: EventId
+}
+
+/** What a tool result message says, before interpretation. */
+export interface ToolResultFacts {
+  readonly text: string
+  readonly failed: boolean
+  /** Tool-specific result metadata, as recorded. */
+  readonly details: unknown
+}
+
+export interface CommandStatus {
+  readonly outcome: CommandOutcome
+  readonly exitCode?: number
+}
+
+/** Links for events derived from a tool result. */
+export interface ToolLink {
+  readonly parentEventId: EventId
+  readonly derivedFrom: ReadonlyArray<EventId>
+}
+
+/**
+ * The parts of the normalizer that depend on the harness: identity and the tool table.
+ * pi's own dialect is `piDialect`; formats derived from pi (oh-my-pi) supply theirs.
+ */
+export interface PiDialect {
+  readonly harness: string
+  readonly name: string
+  readonly format: string
+  readonly toolKind: (name: string) => ToolKind
+  /** The shell command a tool call runs, if it is a shell tool. */
+  readonly shellCommand: (name: string, input: unknown) => string | undefined
+  /** Outcome of a shell tool call, or `undefined` when the result does not end the command. */
+  readonly commandStatus: (result: ToolResultFacts) => CommandStatus | undefined
+  /** File, plan and other effects a tool result proves. */
+  readonly toolEffects: (s: RecordScope, tool: OpenTool, result: ToolResultFacts, link: ToolLink) => void
+}
+
+// ---------------------------------------------------------------------------
 // Tool vocabulary
 // ---------------------------------------------------------------------------
 
@@ -37,12 +86,37 @@ const TOOL_KINDS: Record<string, ToolKind> = {
   write: "edit",
   edit: "edit",
   bash: "execute",
+  powershell: "execute",
   grep: "search",
   find: "search",
   ls: "search"
 }
 
 export const toolKind = (name: string): ToolKind => TOOL_KINDS[name] ?? "other"
+
+const SHELL_TOOLS: ReadonlySet<string> = new Set(["bash", "powershell"])
+
+const piToolEffects = (s: RecordScope, tool: OpenTool, result: ToolResultFacts, link: ToolLink): void => {
+  const path = stringProp(tool.input, "path", "file_path")
+  if (result.failed || path === undefined) return
+  if (tool.name === "read") s.event({ type: "file.read", certainty: "known", path, ...link })
+  if (tool.name === "write") s.event({ type: "file.changed", certainty: "known", path, ...link })
+  if (tool.name === "edit") {
+    // pi 1.0 records a real unified diff as `patch`; `diff` is its numbered display diff.
+    const diff = stringProp(result.details, "patch") ?? stringProp(result.details, "diff")
+    s.event({ type: "file.changed", certainty: "known", path, ...(diff ? { diff } : {}), ...link })
+  }
+}
+
+export const piDialect: PiDialect = {
+  harness: HARNESS,
+  name: NAME,
+  format: FORMAT,
+  toolKind,
+  shellCommand: (name, input) => (SHELL_TOOLS.has(name) ? stringProp(input, "command") : undefined),
+  commandStatus: (result) => bashStatus(result.text, result.failed),
+  toolEffects: piToolEffects
+}
 
 export const decodeLine = makeLineDecoder({ schema: PiRecord, known: KNOWN_TYPES, ignored: METADATA_TYPES })
 
@@ -56,11 +130,13 @@ export const decodeLine = makeLineDecoder({ schema: PiRecord, known: KNOWN_TYPES
  * root, so entries off that path are dropped. Returns `undefined` when every
  * entry is on the path (the common, linear case).
  */
-export const activePath = (entries: ReadonlyArray<readonly [id: string, parentId: string | undefined]>): ReadonlySet<string> | undefined => {
+export const activePath = (
+  entries: ReadonlyArray<readonly [id: string, parentId: string | undefined]>,
+  leaf: string | undefined = entries.at(-1)?.[0]
+): ReadonlySet<string> | undefined => {
   const parents = new Map(entries)
-  const last = entries.at(-1)?.[0]
   const path = new Set<string>()
-  for (let id = last; id !== undefined && !path.has(id); id = parents.get(id)) path.add(id)
+  for (let id = leaf; id !== undefined && !path.has(id); id = parents.get(id)) path.add(id)
   return path.size === parents.size ? undefined : path
 }
 
@@ -73,14 +149,8 @@ export const onPath = (path: ReadonlySet<string> | undefined) => (line: DecodedR
 // State
 // ---------------------------------------------------------------------------
 
-interface OpenTool {
-  readonly startedId: EventId
-  readonly name: string
-  readonly input: unknown
-  readonly commandStartedId?: EventId
-}
-
 export interface PiState {
+  readonly dialect: PiDialect
   readonly sessionId: SessionId
   readonly path: string
   readonly headerSeen: boolean
@@ -91,7 +161,8 @@ export interface PiState {
   readonly tools: ReadonlyMap<string, OpenTool>
 }
 
-export const initialState = (sessionId: SessionId, path: string): PiState => ({
+export const initialState = (sessionId: SessionId, path: string, dialect: PiDialect = piDialect): PiState => ({
+  dialect,
   sessionId,
   path,
   headerSeen: false,
@@ -107,8 +178,15 @@ export const initialState = (sessionId: SessionId, path: string): PiState => ({
 
 const decodeBlock = Schema.decodeUnknownOption(PiBlock)
 
-/** `<timestamp>_<id>.jsonl` → id. */
-export const idFromFileName = (file: string): string | undefined => /_([^_]+)\.jsonl$/.exec(file)?.[1]
+/**
+ * `<timestamp>_<id>.jsonl` → id. The timestamp has no `_` (`:` and `.` become `-`) but custom
+ * session IDs may, so the ID is everything after the first `_`. Accepts a full path.
+ */
+export const idFromFileName = (file: string): string | undefined =>
+  /^[^_]+_(.+)\.jsonl$/.exec(file.slice(Math.max(file.lastIndexOf("/"), file.lastIndexOf("\\")) + 1))?.[1]
+
+/** `<timestamp>_<id>` (a session's artifact directory) → id. */
+export const idFromStem = (stem: string): string | undefined => /^\d{4}-\d{2}-\d{2}T[^_]*_(.+)$/.exec(stem)?.[1]
 
 /** Exit status from pi's bash output trailer. */
 export const bashStatus = (
@@ -123,33 +201,101 @@ export const bashStatus = (
 
 const asJson = (value: unknown) => value as Schema.Json
 
+const prop = (value: unknown, key: string): unknown =>
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>)[key] : undefined
+
+/** Canonical usage from a pi-ai `Usage`: `input` excludes cache reads and `output` includes reasoning. */
+export const usageOf = (model: string | undefined, usage: unknown) =>
+  usageFields({
+    model,
+    inputTokens: tokenCount(prop(usage, "input")),
+    cacheReadTokens: tokenCount(prop(usage, "cacheRead")),
+    cacheWriteTokens: tokenCount(prop(usage, "cacheWrite")),
+    outputTokens: tokenCount(prop(usage, "output")),
+    reasoningTokens: tokenCount(prop(usage, "reasoning") ?? prop(usage, "reasoningTokens"))
+  })
+
+/** Emit `usage.recorded` for one model call, unless the record carries no counts. */
+export const emitUsage = (s: RecordScope, model: string | undefined, usage: unknown): void => {
+  const fields = usageOf(model, usage)
+  if (Object.keys(fields).some((key) => key !== "model")) s.event({ type: "usage.recorded", certainty: "known", ...fields })
+}
+
+/**
+ * A command the user ran from the prompt (`!cmd`). It has no tool call: the record holds the
+ * command and its result, so it yields a started/completed pair with the recorded exit code.
+ */
+export const emitUserCommand = (
+  state: PiState,
+  s: RecordScope,
+  command: {
+    readonly command: string
+    readonly output?: string | undefined
+    readonly exitCode?: number | null | undefined
+    readonly cancelled?: boolean | undefined
+    readonly shell?: string
+  }
+): void => {
+  const commandId = (s.options.nativeEventId ?? `record-${s.options.recordIndex}`) as CommandId
+  const startedId = s.event({
+    type: "command.started",
+    certainty: "known",
+    commandId,
+    command: command.command,
+    ...(state.cwd !== undefined ? { cwd: state.cwd } : {}),
+    ...(command.shell !== undefined ? { shell: command.shell } : {})
+  })
+  const exitCode = typeof command.exitCode === "number" && Number.isInteger(command.exitCode) ? command.exitCode : undefined
+  const outcome: CommandOutcome = command.cancelled === true
+    ? "interrupted"
+    : exitCode === undefined
+    ? "unknown"
+    : exitCode === 0
+    ? "succeeded"
+    : "failed"
+  s.event({
+    type: "command.completed",
+    certainty: "known",
+    commandId,
+    outcome,
+    ...(exitCode !== undefined ? { exitCode } : {}),
+    ...(command.output ? { stdout: command.output } : {}),
+    derivedFrom: [startedId]
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Normalizer
 // ---------------------------------------------------------------------------
 
 type Step = readonly [PiState, ReadonlyArray<Emission>]
 
+/** The scope for one record, with the dialect's provenance. */
+export const recordScope = (
+  state: PiState,
+  recordIndex: number,
+  record?: { readonly id?: string | undefined; readonly timestamp?: string | undefined }
+): RecordScope =>
+  new RecordScope({
+    harness: state.dialect.harness,
+    sessionId: state.sessionId,
+    format: state.dialect.format,
+    path: state.path,
+    recordIndex,
+    nativeEventId: record?.id,
+    timestamp: record?.timestamp
+  })
+
 export const normalizeLine = (state: PiState, line: DecodedRecord<PiRecord>): Step => {
   if (line._tag === "Skip") return [state, []]
-  const base = {
-    harness: HARNESS,
-    sessionId: state.sessionId,
-    format: FORMAT,
-    path: state.path,
-    recordIndex: line.index
-  }
   if (line._tag !== "Record") {
-    const s = new RecordScope(base)
-    warnUndecodable(s, line, NAME)
+    const s = recordScope(state, line.index)
+    warnUndecodable(s, line, state.dialect.name)
     return [state, s.emissions]
   }
 
   const record = line.record
-  const s = new RecordScope({
-    ...base,
-    nativeEventId: "id" in record ? record.id : undefined,
-    timestamp: record.timestamp
-  })
+  const s = recordScope(state, line.index, record)
 
   switch (record.type) {
     case "session": {
@@ -160,7 +306,7 @@ export const normalizeLine = (state: PiState, line: DecodedRecord<PiRecord>): St
         ...(record.cwd !== undefined ? { projectPath: record.cwd } : {}),
         ...(record.version !== undefined ? { metadata: { sessionFormatVersion: record.version } } : {}),
         ...(parent !== undefined
-          ? { relationships: [{ type: "fork", from: state.sessionId, to: makeSessionId(HARNESS, parent) }] }
+          ? { relationships: [{ type: "fork", from: state.sessionId, to: makeSessionId(state.dialect.harness, parent) }] }
           : {})
       })
       s.event({ type: "session.started", certainty: "known" })
@@ -171,6 +317,10 @@ export const normalizeLine = (state: PiState, line: DecodedRecord<PiRecord>): St
       return [state, s.emissions]
     case "session_info":
       if (record.name) s.metadata({ title: { value: record.name, priority: 40 } })
+      return [state, s.emissions]
+    case "usage":
+      // A model call outside the conversation (e.g. `cache_warm`); it still consumed tokens.
+      emitUsage(s, record.model, record.usage)
       return [state, s.emissions]
     case "compaction":
       s.event({ type: "context.compacted", certainty: "known", ...(record.summary ? { summary: record.summary } : {}) })
@@ -244,14 +394,8 @@ const normalizeMessage = (initial: PiState, message: PiMessage, s: RecordScope):
             break
         }
       }
-      const usage = usageFields({
-        model: message.model,
-        inputTokens: tokenCount(message.usage?.input),
-        cacheReadTokens: tokenCount(message.usage?.cacheRead),
-        cacheWriteTokens: tokenCount(message.usage?.cacheWrite),
-        outputTokens: tokenCount(message.usage?.output)
-      })
-      if (Object.keys(usage).some((key) => key !== "model")) s.event({ type: "usage.recorded", certainty: "known", ...usage })
+      // A deferred response is a placeholder: the call's usage arrives with the response.
+      if (message.stopReason !== "deferred") emitUsage(s, message.model, message.usage)
       if (message.stopReason === "error" || message.stopReason === "aborted") {
         s.event({
           type: "harness.notice",
@@ -260,7 +404,8 @@ const normalizeMessage = (initial: PiState, message: PiMessage, s: RecordScope):
           content: [{ type: "text", text: message.errorMessage ?? message.stopReason }]
         })
       }
-      // `toolUse` continues the turn; every other stop reason ends it.
+      // `toolUse` continues the turn, and so does `deferred` (pi 1.0: the provider will deliver the
+      // response later, so the turn's end is not recorded here); the other stop reasons end it.
       const outcome = message.stopReason === "stop" || message.stopReason === "length"
         ? "completed"
         : message.stopReason === "aborted"
@@ -273,6 +418,21 @@ const normalizeMessage = (initial: PiState, message: PiMessage, s: RecordScope):
     }
     case "toolResult":
       return [completeTool(state, s, message), s.emissions]
+    case "system":
+      // The system prompt is harness configuration, not conversation.
+      return [state, s.emissions]
+    case "bashExecution":
+      emitUserCommand(state, s, message)
+      return [state, s.emissions]
+    case "custom":
+    case "hookMessage": {
+      // Extension-injected text, as for `custom_message` entries.
+      const text = textOf(message.content)
+      if (text.length > 0) {
+        s.event({ type: "harness.notice", certainty: "known", kind: "other", content: [{ type: "text", text }] })
+      }
+      return [state, s.emissions]
+    }
   }
 }
 
@@ -286,10 +446,10 @@ const startTool = (
     certainty: "known",
     toolCallId: block.id as ToolCallId,
     name: block.name,
-    kind: toolKind(block.name),
+    kind: state.dialect.toolKind(block.name),
     ...(block.arguments !== undefined ? { input: asJson(block.arguments) } : {})
   })
-  const command = block.name === "bash" ? stringProp(block.arguments, "command") : undefined
+  const command = state.dialect.shellCommand(block.name, block.arguments)
   const commandStartedId = command === undefined ? undefined : s.event({
     type: "command.started",
     certainty: "known",
@@ -324,9 +484,10 @@ const completeTool = (state: PiState, s: RecordScope, message: Extract<PiMessage
   const tools = new Map(state.tools)
   tools.delete(message.toolCallId)
   const link = { parentEventId: open.startedId, derivedFrom: [open.startedId, resultId] }
+  const result: ToolResultFacts = { text, failed, details: message.details }
 
-  if (open.commandStartedId !== undefined) {
-    const status = bashStatus(text, failed)
+  const status = open.commandStartedId === undefined ? undefined : state.dialect.commandStatus(result)
+  if (status !== undefined) {
     s.event({
       type: "command.completed",
       certainty: "known",
@@ -338,14 +499,6 @@ const completeTool = (state: PiState, s: RecordScope, message: Extract<PiMessage
     })
   }
 
-  const path = stringProp(open.input, "path", "file_path")
-  if (!failed && path !== undefined) {
-    if (open.name === "read") s.event({ type: "file.read", certainty: "known", path, ...link })
-    if (open.name === "write") s.event({ type: "file.changed", certainty: "known", path, ...link })
-    if (open.name === "edit") {
-      const diff = message.details?.diff
-      s.event({ type: "file.changed", certainty: "known", path, ...(diff ? { diff } : {}), ...link })
-    }
-  }
+  state.dialect.toolEffects(s, open, result, link)
   return { ...state, tools }
 }

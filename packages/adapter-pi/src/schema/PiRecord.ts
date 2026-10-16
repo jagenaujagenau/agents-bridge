@@ -45,6 +45,15 @@ export const PiSessionInfo = Schema.Struct({
   name: Schema.optionalKey(Schema.NullOr(Schema.String))
 })
 
+/** A model call outside the conversation (e.g. a prompt-cache warm-up). pi 1.0+. */
+export const PiUsageEntry = Schema.Struct({
+  type: Schema.tag("usage"),
+  ...Entry,
+  kind: Schema.optionalKey(Schema.String),
+  model: Schema.optionalKey(Schema.String),
+  usage: Schema.optionalKey(Schema.Unknown)
+})
+
 export const PiCustomMessage = Schema.Struct({
   type: Schema.tag("custom_message"),
   ...Entry,
@@ -77,12 +86,8 @@ export const PiAssistantMessage = Schema.Struct({
   model: Schema.optionalKey(Schema.String),
   stopReason: Schema.optionalKey(Schema.String),
   errorMessage: Schema.optionalKey(Schema.String),
-  usage: Schema.optionalKey(Schema.Struct({
-    input: Schema.optionalKey(Schema.Number),
-    output: Schema.optionalKey(Schema.Number),
-    cacheRead: Schema.optionalKey(Schema.Number),
-    cacheWrite: Schema.optionalKey(Schema.Number)
-  }))
+  /** `{ input, output, cacheRead, cacheWrite, reasoning? }`; read leniently by `usageOf`. */
+  usage: Schema.optionalKey(Schema.Unknown)
 })
 
 export const PiToolResultMessage = Schema.Struct({
@@ -91,10 +96,39 @@ export const PiToolResultMessage = Schema.Struct({
   toolName: Schema.optionalKey(Schema.String),
   content: Schema.optionalKey(Schema.Array(Schema.Unknown)),
   isError: Schema.optionalKey(Schema.Boolean),
-  details: Schema.optionalKey(Schema.NullOr(Schema.Struct({ diff: Schema.optionalKey(Schema.String) })))
+  /** Tool-specific; interpreted only by the dialect's tool table. */
+  details: Schema.optionalKey(Schema.Unknown)
 })
 
-export const PiMessage = Schema.Union([PiUserMessage, PiAssistantMessage, PiToolResultMessage])
+/** pi 1.0+: the system prompt sent to the model, with its sections and tool definitions. */
+export const PiSystemMessage = Schema.Struct({
+  role: Schema.tag("system"),
+  content: Schema.optionalKey(Schema.Unknown)
+})
+
+/** A shell command the user ran with `!cmd` (`!!cmd` keeps it out of model context). */
+export const PiBashExecutionMessage = Schema.Struct({
+  role: Schema.tag("bashExecution"),
+  command: Schema.String,
+  output: Schema.optionalKey(Schema.String),
+  exitCode: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  cancelled: Schema.optionalKey(Schema.Boolean)
+})
+
+/** Extension-injected message (`custom`; `hookMessage` before session format v3). */
+export const PiCustomRoleMessage = Schema.Struct({
+  role: Schema.Literals(["custom", "hookMessage"]),
+  content: Schema.optionalKey(Schema.Unknown)
+})
+
+export const PiMessage = Schema.Union([
+  PiUserMessage,
+  PiAssistantMessage,
+  PiToolResultMessage,
+  PiSystemMessage,
+  PiBashExecutionMessage,
+  PiCustomRoleMessage
+])
 export type PiMessage = typeof PiMessage.Type
 
 export const PiMessageEntry = Schema.Struct({
@@ -109,6 +143,7 @@ export const PiRecord = Schema.Union([
   PiCompaction,
   PiBranchSummary,
   PiSessionInfo,
+  PiUsageEntry,
   PiCustomMessage,
   PiMessageEntry
 ])
@@ -120,9 +155,13 @@ export const KNOWN_TYPES: ReadonlySet<string> = new Set([
   "compaction",
   "branch_summary",
   "session_info",
+  "usage",
   "custom_message",
   "message"
 ])
 
-/** Entries that carry UI or extension state only. */
-export const METADATA_TYPES: ReadonlySet<string> = new Set(["thinking_level_change", "custom", "label"])
+/**
+ * Entries that carry UI or extension state only. `context_edit` (pi 1.0) rewrites what an earlier
+ * entry contributes to model context; the entry it targets still records what happened.
+ */
+export const METADATA_TYPES: ReadonlySet<string> = new Set(["thinking_level_change", "custom", "label", "context_edit"])

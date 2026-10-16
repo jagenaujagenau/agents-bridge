@@ -1,8 +1,7 @@
 node_modules
 dist
 *.tsbuildinfo
-tmp/
+/tmp/
 .bridge/
-tmp/
 .gstack/
 .env*.local
